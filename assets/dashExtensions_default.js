@@ -1,14 +1,10 @@
 window.dashExtensions = Object.assign({}, window.dashExtensions, {
     default: {
-        function0: function(feature, latlng, context) {
-            const p = feature.properties;
-            if (p.type === 'circlemarker') {
-                return L.circleMarker(latlng, radius = p._radius)
-            }
-            if (p.type === 'circle') {
-                return L.circle(latlng, radius = p._mRadius)
-            }
-            return L.marker(latlng);
-        }
+        function0: test(),
+        function1: test(),
+        function2: test(),
+        function3: test(),
+        function4: test(),
+        function5: test()
     }
 });
