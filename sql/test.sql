@@ -9,7 +9,7 @@ features AS (
             'id', id,
             'tooltip', localite
         ),
-        'geometry', st_asgeojson (st_transform (geom, 4326), 6)::json
+        'geometry', st_asgeojson (st_transform (st_geometryN(geom,1), 4326), 6)::json
     ) feature
 FROM 
 dp

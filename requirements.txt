@@ -2,5 +2,4 @@ python-dotenv
 dash
 dash-leaflet==0.1.23
 dash-extensions==0.0.65
-"psycopg[binary,pool]"
-flask_restful
+psycopg[binary,pool]

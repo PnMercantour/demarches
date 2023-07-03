@@ -1,4 +1,4 @@
-from dash import html, Dash,dcc
+from dash import html, Dash,dcc, clientside_callback,ClientsideFunction
 import dash_leaflet as dl
 import dash
 import os
@@ -6,30 +6,27 @@ from dotenv import dotenv_values
 import json
 from dash_extensions.javascript import assign
 from psycopg import connect
+from dash.dependencies import Input, Output, State
+
 config =  dotenv_values(".env")
 
-app = Dash(__name__, use_pages=True, url_base_pathname='/')
+app = Dash(__name__)
+
+
+draw_flag = assign("""function(feature, latlng){
+const flag = L.icon({iconUrl: `https://img.icons8.com/ios/50/circled-h.png`, iconSize: [50, 50]});
+return L.marker(latlng, {icon: flag});
+}""")
 
 #LOAD ASSETS FILES JS
 
-scripts = html.Div([
-    html.Script(src=app.get_asset_url('bundle.js'), type='text/javascript'),
-])
+
 
 ##LOAD FILES && PARSING && CONVERTING TO GEOJSON
 
 files = os.listdir('./assets')
 
-geojsons = {"type":"FeatureCollection", "features":[]}
-for file in files:
-    if file.endswith(".geojson"):
-        with open('./assets/'+file,'r') as raw:
-            tmp = {"type":"Feature", "properties":{}, "geometry":{}}
-            tmp["geometry"] = json.loads(raw.read())
-            tmp['properties']['id']=file
-            geojsons["features"].append(tmp)
-# geoComponent = dl.GeoJSON(data=geojsons, id="geojson")
-print(config)
+
 
 conn = connect(config["DB_CONNECTION"])
 
@@ -47,10 +44,14 @@ cur = conn.cursor()
 
 cur.execute(open('./sql/test.sql','r').read())
 rows = cur.fetchall()
-geoComponent = dl.GeoJSON(data=json.loads(rows[0][0]))
-# open('./assets/test.geojson','w').write(rows[0][0])
-# print(rows[0][0])
 
+# geobuf = geojson_to_geobuf(json.loads(rows[0][0]))
+geojson = json.loads(rows[0][0])
+
+
+
+geoComponent = dl.GeoJSON(data=geojson,id="geojson",options=dict(pointToLayer=draw_flag),cluster=True, superClusterOptions=dict(radius=200))
+# print(rows[0][0])
 
 
 tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
@@ -83,32 +84,20 @@ map = dl.Map(children=[tile,  dl.FeatureGroup([
                 'marker':False,
                 'circlemarker':False
 
-            })]),geoComponent],style={'width':'1200px','height':'900px'},center=center,zoom=9, id="map");
-layout = html.Div([scripts,map,html.Div(id="test")])
+            })]), geoComponent],style={'width':'1200px','height':'900px'},center=center,zoom=9, id="map");
+layout = html.Div([map,html.Button("Continuer sur démarches simplifiées",id="continue"), html.Div(id="output")])
+
+clientside_callback(ClientsideFunction(namespace='clientside', function_name='save_and_redirect'),
+Output("output","children"),
+Input("continue","n_clicks"), prevent_initial_call=True)
 
 def map():
     return layout
 
-dash.register_page("Home",path="/",layout=layout)
-dash.register_page("Map",path="/map",layout=map)
 
-app.layout =  html.Div([
-    html.Div(
-        [
-            html.Div(
-                dcc.Link(
-                    f"{page['name']} - {page['path']}", href=page["relative_path"]
-                )
-            )
-            for page in dash.page_registry.values()
-        ]
-    ),
-    dash.page_container,
-])
-
+app.layout =  map()
 
 app.title = "Demarches"
 
 
-
-app.run(dev_tools_hot_reload=True,debug=True)
+app.run(dev_tools_hot_reload=True,debug=False)
