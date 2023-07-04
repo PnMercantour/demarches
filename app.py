@@ -16,7 +16,6 @@ app.layout = html.Div([
     html.Div("Author : X", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px','margin':'10px'})
 ])
 
-
 # print('Refreshed')
 
 
