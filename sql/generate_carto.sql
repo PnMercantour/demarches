@@ -1,0 +1,1 @@
+INSERT INTO survol.carte (uuid, geom) VALUES (%s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))

@@ -1,0 +1,1 @@
+UPDATE survol.dossier SET state = %s WHERE dossier_id = %s;
