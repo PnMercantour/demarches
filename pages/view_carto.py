@@ -68,7 +68,6 @@ geojson = json.loads(rows[0][0])
 
 
 geoComponent = dl.GeoJSON(data=geojson,id="geojson",options=dict(pointToLayer=draw_flag),cluster=True, superClusterOptions=dict(radius=200))
-# print(rows[0][0])
 
 
 tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
@@ -99,8 +98,7 @@ def generate_carto_info(_geojson):
         conn.commit()
     except psycopg.Error as e:
         print(e)
-        print(e.pgcode)
-        print(e.pgerror)
+
     cur.close()
 
     return uuid

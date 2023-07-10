@@ -11,6 +11,8 @@ window.carto = Object.assign({}, window.carto, {
             return L.marker(latlng, {icon: flag});
         },
         draw_arrow: function(feature, layer, context){
+
+            //TODO: deport on properties geojson
             date = new Date(feature.properties.creation_date);
             last_color = '#99ff99';
             old_color = '#9999FF';
@@ -87,5 +89,25 @@ window.carto = Object.assign({}, window.carto, {
                   ]
             }).addTo(map);
         },
-    }  
+        get_limits_style(feature, context){
+
+            return {
+                color: '#167d14',
+                fillOpacity: 0.2,
+                weight: 3,
+                opacity: 0.8
+            }
+        }
+    },
+
+});
+
+window.dash_clientside = Object.assign({}, window.dash_clientside, {
+    system: {
+        alert_dialog: function(data){
+            if(data['type'] == "error")
+                alert(data['message']);
+            return data['message'];
+        }
+    }
 });

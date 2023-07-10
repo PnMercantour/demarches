@@ -3,7 +3,14 @@ from dotenv import dotenv_values
 from dash_extensions.javascript import Namespace
 
 ## GLOBAL CONFIGURATION
-CONFIG =  dotenv_values(".env")
+def CONFIG(key):
+    value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
+    if value == "True":
+        return True
+    elif value == "False":
+        return False
+    else:
+        return value
 NS_RENDER = Namespace("carto","rendering")
 
 EDIT_STATE = {
@@ -15,10 +22,45 @@ EDIT_STATE = {
     "sans_suite" : False,
 }
 
+STATE_PROPS = {
+    'none' : {
+        'color' : '#555555',
+        'icon' : 'fa fa-circle',
+        'text' : 'En construction'
+    },
+    'en_construction' : {
+        'color' : '#555555',
+        'icon' : 'fa fa-circle',
+        'text' : 'En construction'
+    },
+    'en_instruction' : {
+        'color' : '#ffdd00',
+        'icon' : 'fa fa-circle',
+        'text' : 'En instruction'
+    },
+    "accepte" : {
+        'color' : '#00ff00',
+        'icon' : 'fa fa-circle',
+        'text' : 'Accepté'
+    },
+    "refuse" : {
+        'color' : '#ff0000',
+        'icon' : 'fa fa-circle',
+        'text' : 'Refusé'
+    },
+    "sans_suite" : {
+        'color' : '#ff00ff',
+        'icon' : 'fa fa-circle',
+        'text' : 'Sans suite'
+    },
+}
+
 class SavingMode:
     CREATE = 0
     UPDATE = 1
-    ADMIN = 2
+    REQUEST_EDIT = 2
+    BLOCK_ACCEPTED = 3
+    BLOCK_REFUSED = 4
 
     def to_str(mode):
         if mode == SavingMode.CREATE:
@@ -35,7 +77,7 @@ class SavingMode:
 ## DB CONFIGURATION
 def CONN():
     from psycopg import connect
-    conn = connect(CONFIG["DB_CONNECTION"])
+    conn = connect(CONFIG("DB_CONNECTION"))
     if conn is None:
         print("Error")
     else:
@@ -44,7 +86,6 @@ def CONN():
 
 
 ## ID CONFIGURATION
-EDIT_CONTROL_ID = "comp_edit"
 SAVE_BUTTON_ID = "comp_save"
 INFO_BOX_ID = "info-box"
 INFO = "info"
@@ -72,7 +113,7 @@ EDIT_CONTROL_NO_EDIT_DRAW = {
                 'circlemarker':False
 }
 
-EDIT_CONTROL = dl.FeatureGroup([ dl.EditControl(draw=EDIT_CONTROL_EDIT_DRAW, id=EDIT_CONTROL_ID)])
+EDIT_CONTROL = lambda : dl.EditControl(draw=EDIT_CONTROL_EDIT_DRAW)
 
 
 
@@ -85,7 +126,7 @@ tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
                 "&TILEMATRIX={z}" +
                 "&TILEROW={y}" +
                 "&TILECOL={x}")
-tile_url = tile_url.replace("CLEF",CONFIG["IGN_KEY"])
+tile_url = tile_url.replace("CLEF",CONFIG("IGN_KEY"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 
