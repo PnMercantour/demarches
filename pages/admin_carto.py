@@ -15,5 +15,5 @@ map = map.addGeoJson(None,id="flight", option=dict(style={'opacity': 0.8}, onEac
 file_info = FileInfo()
 admin_panel = AdminPanel(map)
 
-def layout(uuid=None,security_token=None):
-   return html.Div([INFO_BOX_COMP(),URL_DATA_COMP(uuid=uuid,security_token=security_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flex-direction': 'row', 'height': '100vh'})])
+def layout(uuid=None,security_token=None,st_token=None,**kwargs):
+   return html.Div([INFO_BOX_COMP(),URL_DATA_COMP(uuid=uuid,security_token=security_token, st_token=st_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})])

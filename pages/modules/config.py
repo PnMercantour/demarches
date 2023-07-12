@@ -58,17 +58,18 @@ STATE_PROPS = {
 class SavingMode:
     CREATE = 0
     UPDATE = 1
-    REQUEST_EDIT = 2
+    REQUEST_ST = 2
+    ST_AVIS = 5
     BLOCK_ACCEPTED = 3
     BLOCK_REFUSED = 4
 
     def to_str(mode):
         if mode == SavingMode.CREATE:
             return "Continuer sur démarches simplifiées"
-        elif mode == SavingMode.UPDATE:
-            return "Mettre à jour et soummetre à validation"
-        elif mode == SavingMode.ADMIN:
-            return "Valider et envoyer au pétiionnaire"
+        elif mode == SavingMode.REQUEST_ST:
+            return "Soumettre ST"
+        elif mode == SavingMode.ST_AVIS:
+            return "Valider (ST)"
 
 
 

@@ -51,12 +51,13 @@ def set_on_save_callback(savingMode:SavingMode, edit_control):
 def set_admin_panel_callback(adminPanel, edit_control):
     @callback(
         Output(INFO, 'data',allow_duplicate=True),
-        Input(adminPanel.get_request_for_edit_button(),'n_clicks'),
+        Input(adminPanel.get_submit(),'n_clicks'),
         [State(adminPanel.get_email_input(), 'value'), State(adminPanel.get_password_input(), 'value'), State(edit_control, 'geojson'), State('url_data','data')],
         prevent_initial_call=True,
     )
     def __set__(n_clicks, email, password, geojson, data):
         if n_clicks is not None:
+            print(data)
             if email is None or password is None:
                 return {"message":"Please fill the email and password fields"}
             if len(geojson['features']) == 0:
@@ -68,10 +69,11 @@ def set_admin_panel_callback(adminPanel, edit_control):
             file = FILE(current_flight['dossier_id'])
             flight = (_,geojson)
             print(f"Saving flight {uuid} with email {email} and password {password}")
-            (out,_) = SAVE_FLIGHT(file, flight, SavingMode.REQUEST_EDIT, {"email":email,"password":password})
+            (out,_) = SAVE_FLIGHT(file, flight, adminPanel.get_mode() , {"email":email,"password":password})
             if 'error' in out:
                 return {'message':out['error']}
             else:
                 return {'message': f'Flight saved with uuid {out["uuid"]}'}
         else:
             return {'message':"Nothing"}
+

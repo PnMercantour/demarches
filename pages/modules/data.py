@@ -265,7 +265,7 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security):
 
 
         return FLIGHT(uuid)
-    elif saveMode == SavingMode.REQUEST_EDIT:
+    elif saveMode == SavingMode.REQUEST_ST:
         resp = __change_file_state__(file['number'], security['password'], DossierState.CONSTRUCTION)
         if "error" in resp:
             return (resp, None)
