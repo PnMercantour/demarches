@@ -9,19 +9,18 @@ from pages.modules.data import FLIGHT, FILE, IS_ST_ALREADY_REQUESTED, INFO_BOX_C
 
 
 def set_info_listener_callback():
-    def make_children(mess):
-        return html.Div([INFO_BOX_COMP, html.Div(str(mess))])
+
 
     @callback(
         Output(INFO_BOX_ID, 'children'),
         Input(INFO, 'data'))
     def __set__(data):
         if data is None:
-            return make_children('Nothing')
+            return 'Nothing'
         if 'message' in data:
-            return make_children(data['message'])
+            return data['message']
         else:
-            return make_children('Nothing')
+            return 'Nothing'
 
 def set_flight_callback(geojson_comp_id ='flight'):
     @callback(
