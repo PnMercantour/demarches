@@ -4,9 +4,12 @@ import psycopg
 import json
 from uuid import uuid4
 
-from demarches_simpy import Profile, Dossier, DossierState, StateChanger, MessageSender
+
+from demarches_simpy import Profile, Dossier, DossierState, MessageSender, StateModifier, AnnotationModifier
 from demarches_simpy.utils import DemarchesSimpyException
-from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, CONFIG
+from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, CONFIG, SEND_EMAIL, SEND_EMAIL_WITH_FILE
+
+from print_my_report import CartoPrinter, DisplayObj
 
 conn = CONN()
 profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(CONFIG('verbose')) , warning = True)
@@ -19,16 +22,14 @@ def reinit_transaction():
 
 #TODO:BETTER DATA RETRIEVING WITH QUEUE
 
-
+INFO_BOX_COMP =  dcc.Store(id=INFO,data={"message":"", "type":"info"})
 ## URL DATA
 def URL_DATA_COMP(**kwargs):
     '''Return the URL data (dict)'''
     return dcc.Store(id='url_data',data=kwargs)
 
 ## INFO-ERROR DATA
-def INFO_BOX_COMP():
-    '''Return the info box (dict)'''
-    return dcc.Store(id=INFO,data={"message":"", "type":"info"})
+
 
 ## DATA MAP DISPLAY
 
@@ -141,7 +142,7 @@ def __get_file__(dossier_id):
 def __change_file_state__(dossier_number, instructeur_id, state: DossierState):
     try:
         dossier = __get_file_by_number__(dossier_number)
-        changer = StateChanger(profile, dossier, instructeur_id)
+        changer = StateModifier(profile, dossier, instructeur_id)
         changer.change_state(state)
         return {"success":"The state has been changed"}
     except DemarchesSimpyException as e:
@@ -176,6 +177,120 @@ def __update_file_state__(dossier_number, data):
     cur.close()
     return data
 
+def __generate_st_token__(dossier_id):
+    uuid = str(uuid4())
+    cur = conn.cursor()
+    try:
+        cur.execute(open('./sql/generate_st_token.sql','r').read(),(uuid,dossier_id))
+        conn.commit()
+    except psycopg.Error as e:
+        print(e)
+        return f'{{"error":"{str(e)}"}}'
+    cur.close()
+    return uuid
+
+def __check_file_state__(dossier_number, savingMode: SavingMode):
+    dossier = __get_file_by_number__(dossier_number)
+    state = dossier.force_fetch().get_dossier_state()
+    if state != 'en_construction' and savingMode == SavingMode.UPDATE:
+        return False
+    if state != 'en_instruction' and (savingMode == SavingMode.REQUEST_ST or savingMode == SavingMode.ST_AVIS):
+        return False
+    return True
+
+def __send_to_st__(dossier_number, data):
+    '''data = {
+        "email: "email"
+        "message": "message"
+        "url": "url"
+        }
+    '''
+
+    try:
+        dossier = __get_file_by_number__(dossier_number)
+    except DemarchesSimpyException as e:
+        return {"error":e.message}
+
+    mess = f"""
+    Bonjour,
+    Vous trouverez ci-joint le lien vers le dossier n°{dossier_number} :
+    {dossier.get_pdf_url()}
+
+    {str(dossier)}
+
+    Pour valider et visualiser le vol de ce dossier veuillez cliquer sur le lien
+    sécurisé suivant :
+    {data['url']}
+
+    Remarque : {data['message']}
+
+    Cordialement,
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
+
+
+
+    """
+
+    resp = SEND_EMAIL(data['email'], f"Avis dossier n°{dossier_number}",mess)
+
+    return resp
+def __send_to_instruc__(dossier_number, data):
+    '''data = {
+        "email: "email"
+        "message": "message"
+        "url": "url"
+        }
+    '''
+
+    try:
+        dossier = __get_file_by_number__(dossier_number)
+    except DemarchesSimpyException as e:
+        return {"error":e.message}
+
+    mess = f"""
+    
+    Le ST du dossier n°{dossier_number} a validé le dossier.
+
+    Prescription : {data['message']}
+
+    {str(dossier)}
+
+    Vous pouvez consulter et modifier la prescription sur Démarches Simplifiées,
+
+    pour valider ou refuser le dossier merci de cliquer sur le lien suivant :
+    {data['url']}
+
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
+
+
+
+    """
+
+    resp = SEND_EMAIL(data['email'], f"Validation ST dossier n°{dossier_number}",mess)
+
+    return resp
+def __send_summary__(to, flight_file_path, dossier):
+
+
+    mess = f"""
+    
+    Le dossier n°{dossier.get_number()} a été validé.
+
+    Vous trouverez ci-joint le plan de vol, ainsi que l'attestation téléchargeable.
+
+    {str(dossier)}
+
+    Attestation : {dossier.get_date()['dossier']['attestation ']['url']}
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
+
+    """
+
+    resp = SEND_EMAIL_WITH_FILE(to,f'Validation dossier n°{dossier.get_number()}',mess,flight_file_path)
+
+    return resp
 
 def __update_file_last_carte__(data):
     cur = conn.cursor()
@@ -189,6 +304,31 @@ def __update_file_last_carte__(data):
     cur.close()
     return data
 
+def __update_file_annotation__(dossier_number, instructeur_id, message="None"):
+    try:
+        dossier = __get_file_by_number__(dossier_number)
+    except DemarchesSimpyException as e:
+        return {"error":e.message}
+
+    modifier = AnnotationModifier(profile, dossier, instructeur_id)
+    
+    resp = modifier.set_annotation(dossier.get_annotations()['url-instructeur'], message)
+    return {"success":resp} if resp else {"error":"An error occured"}
+
+def __is_st_token_valid__(dossier_number, security_token):
+    try:
+        dossier = __get_file_by_number__(dossier_number)
+        id = dossier.get_id()
+        print(id)
+        print(security_token)
+        cur = conn.cursor()
+        cur.execute(open('./sql/check_st_token.sql','r').read(),(id,security_token))
+        rows = cur.fetchone()
+        cur.close()
+        return rows[0]
+    except psycopg.Error as e:
+        print(e)
+        return False
 
 
 def __is_security_token_valid__(dossier_number, security_token):
@@ -209,6 +349,15 @@ def __is_instructeur_password_valid__(dossier_number, email, password):
         return False
     return False
     
+def __build_flight__(geojson, dossier):
+    title = DisplayObj('Plan de vol', f"Plan de vol du dossier n°{dossier.get_number()}")
+    info1 = DisplayObj('Dossier Info', str(dossier))
+
+    from PIL import Image
+    printer = CartoPrinter(geojson, title, [info1],logo=Image.open("./assets/logo.png"))
+    printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_number()}.pdf", output_dir="./pdf")
+
+    return 'flight_'+str(dossier.get_number())+'.pdf'
 def FILE(dossier_id,force_update=False):
     '''Return the file info (dict)'''
     if dossier_id in file_cache and not force_update:
@@ -225,13 +374,30 @@ def FILE(dossier_id,force_update=False):
         return file
 
 
+def IS_ST_ALREADY_REQUESTED(flight_uuid):
+    '''Return True if the ST has already been requested'''
+    try:
+        (info,_) = FLIGHT(flight_uuid)
+        dossier_id = info['dossier_id']
+
+        cursor = conn.cursor()
+        cursor.execute(open('./sql/is_st_already_requested.sql','r').read(),(dossier_id,))
+        rows = cursor.fetchone()
+        cursor.close()
+        return rows[0]
+    except psycopg.Error as e:
+        print(e)
+        return False
 
 
 
 def SECURITY_CHECK(dossier_number, security):
     '''Return True if the security is valid for the dossier_id'''
+    print(security)
     if 'security-token' in security:
         return __is_security_token_valid__(dossier_number, security['security-token'])
+    elif 'st_token' in security and security['st_token'] is not None:
+        return __is_st_token_valid__(dossier_number, security['st_token'])
     elif 'password' in security and 'email' in security:
         return __is_instructeur_password_valid__(dossier_number, security['email'], security['password'])
     else:
@@ -240,20 +406,27 @@ def SECURITY_CHECK(dossier_number, security):
 
 ## SAVE DATA
 
-def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security):
+def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
     if not SECURITY_CHECK(file['number'], security):
-        return {"error":"Security not valid"}
+        return ({"error":"Security not valid"}, None)
+
+    #CHECK STATE
+    if saveMode != SavingMode.CREATE:
+        if not __check_file_state__(file['number'], saveMode):
+            return ({"error":"File is not in the right state"}, None)
 
     # COMMON SAVING
-    (_, geojson) = flight
-    uuid = __save_new_flight__(geojson,dossier_id=file['id'])
-    file['last_carte'] = uuid
-    file = __update_file_last_carte__(file)
+    (flightinfo, geojson) = flight
+    if geojson is not None:
+        uuid = __save_new_flight__(geojson,dossier_id=file['id'])
+        file['last_carte'] = uuid
+        file = __update_file_last_carte__(file)
     
     
     if saveMode == SavingMode.UPDATE:
         ## Create a new carto, file is provided, flight only geonjson is provided, security token is provided and need to be checked    
         dossier = __get_file_by_number__(file['number'])
+
         
         # check if file contain already an instructeur
         instructeurs = dossier.get_attached_instructeurs_info()
@@ -266,16 +439,81 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security):
 
         return FLIGHT(uuid)
     elif saveMode == SavingMode.REQUEST_ST:
-        resp = __change_file_state__(file['number'], security['password'], DossierState.CONSTRUCTION)
-        if "error" in resp:
+        token = __generate_st_token__(file['id'])
+
+        if 'error' in token:
+            return (token, None)
+
+
+        data = {
+            "email": "contact@rodriguez-esteban.com",
+            "message": message,
+            "url": f"http://localhost:8050/admin/{uuid}?st_token={token}",
+        }
+        resp = __send_to_st__(file['number'], data)
+
+        if 'error' in resp:
             return (resp, None)
         
-        # send message
-        resp = __send_message__(file['number'], security['password'], "Une demande de modification de la carte a été effectuée")
-        if "error" in resp:
+        return FLIGHT(uuid)
+    elif saveMode == SavingMode.ST_AVIS:
+        print(flightinfo)
+        data = {
+            "email" : "esteban.rodriguez@mercantour-parcnational.fr",
+            "message" : message,
+            "url": f"http://localhost:8050/admin/{flightinfo['uuid']}",
+        }
+
+        resp = __send_to_instruc__(file['number'], data)
+
+        
+        if 'error' in resp:
             return (resp, None)
 
-        return FLIGHT(uuid)
+        dossier = __get_file_by_number__(file['number'])
+
+        
+        # check if file contain already an instructeur
+        instructeurs = dossier.get_attached_instructeurs_info()
+        if len(instructeurs) != 0:
+            instructeur_id = instructeurs[0]['id']
+
+        resp = __update_file_annotation__(file['number'], instructeur_id, message)
+
+
+        if 'error' in resp:
+            return (resp, None)
+
+        return FLIGHT(flightinfo['uuid'])
+    elif saveMode == SavingMode.BLOCK_ACCEPTED:
+        # get the newest flight
+        (flightinfo, geojson) = FLIGHT(file['last_carte'])
+
+
+        dossier = __get_file_by_number__(file['number'])
+
+        __change_file_state__(file['number'], security['password'], DossierState.ACCEPTER)
+
+        last = {
+            "type": "FeatureCollection",
+            "features": [
+                geojson['features'][0]
+            ]
+        }
+
+
+        #Build the pdf
+        file_path = __build_flight__(last, dossier)
+        print('PDF built !')
+
+        # send the pdf to the user
+        resp =  __send_summary__("esteban.rodriguez@mercantour-parcnational.fr", file_path, dossier)
+        if 'error' in resp:
+            return (resp, None)
+        return FLIGHT(flightinfo['uuid'])
+        
+
+
 
     else:
         return ({"error":"Not implemented"}, None)

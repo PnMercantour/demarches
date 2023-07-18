@@ -1,6 +1,14 @@
 python-dotenv
-dash
+dash>=2.6.1
 dash-leaflet==0.1.23
 dash-extensions==0.0.65
 psycopg[binary,pool]
 dash-bootstrap-components
+dash[diskcache]
+Flask-Caching>= 2.0.1
+diskcache>=5.2.1
+numpy
+pandas
+redis
+multiprocess
+psutil

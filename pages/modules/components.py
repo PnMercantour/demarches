@@ -88,21 +88,20 @@ class AdminPanel(html.Div):
 
         
         self.trigger_dialog_button = html.Button("...", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
-        self.submit = html.Button("...", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
+        self.submit = html.Button("...",id="zaezreaz", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
         self.admin_email = dcc.Input(type="email", placeholder="Instructeur Email", style={'margin': '10px'})
         self.admin_password = dcc.Input(type="password", placeholder="Instructeur Password", style={'margin': '10px'})
         self.accepter = html.Button("Accepter", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
         self.refuser = html.Button("Refuser", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
-        self.avis = dcc.Input(type="text", placeholder="Pas de prescription", style={'margin': '10px'})
+        self.avis = dcc.Input(type="text", placeholder="...", style={'margin': '10px'})
         self.cancel = html.Button("Cancel", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'})
-
         self.dialog = html.Dialog([
             html.H3("Prescription ? :"),
             self.avis,
             self.submit,
             self.cancel,
 
-        ], style={"zIndex":"1000"}, open=False)
+        ], style={"zIndex":"900"}, open=False)
         self.form = dbc.Form([
             self.admin_email,
             self.admin_password,
@@ -127,8 +126,8 @@ class AdminPanel(html.Div):
             self.cancel,
         ])
 
-
     def init_output(self, mode: SavingMode, title="Prescription ?"):
+        self.mode = mode
         return html.Div([
             self.admin_email,
             self.admin_password,
@@ -136,6 +135,9 @@ class AdminPanel(html.Div):
             self.accepter,
             self.refuser,
         ])
+
+    def set_mode(self, mode: SavingMode):
+        self.mode = mode
         
     def get_children(self):
         return self.children

@@ -19,7 +19,7 @@ flight_saver = FlightSaver(SavingMode.UPDATE, map)
 
 
 def layout(uuid=None,security_token=None):
-   return html.Div([INFO_BOX_COMP(),URL_DATA_COMP(uuid=uuid,security_token=security_token),map, flight_saver,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})
+   return html.Div([URL_DATA_COMP(uuid=uuid,security_token=security_token),map, flight_saver,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})
 
 ## CALLBACKS
 

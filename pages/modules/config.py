@@ -1,6 +1,12 @@
 import dash_leaflet as dl
+from dash import DiskcacheManager
 from dotenv import dotenv_values
 from dash_extensions.javascript import Namespace
+import smtplib,ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 ## GLOBAL CONFIGURATION
 def CONFIG(key):
@@ -11,6 +17,79 @@ def CONFIG(key):
         return False
     else:
         return value
+
+
+## EMAIL CONFIGURATION
+def SEND_EMAIL(to,subject,message):
+    port = 465
+    smtp_server = "mail.espaces-naturels.fr"
+    sender_email = CONFIG("SENDER_EMAIL")
+    password = CONFIG("SENDER_PASSWORD")
+
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to
+
+    # Créez une partie texte du message avec l'encodage spécifié
+    part = MIMEText(message, "plain", "utf-8")
+    msg.attach(part)
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, to, msg.as_string())
+
+    except Exception as e: 
+        print(e)
+        return {'error':str(e)}
+    return {'message':'Email sent'}
+
+def SEND_EMAIL_WITH_FILE(to,subject,message,file_path):
+    port = 465
+    smtp_server = "mail.espaces-naturels.fr"
+    sender_email = CONFIG("SENDER_EMAIL")
+    password = CONFIG("SENDER_PASSWORD")
+
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to
+
+    # Créez une partie texte du message avec l'encodage spécifié
+    part = MIMEText(message, "plain", "utf-8")
+    msg.attach(part)
+
+    # Créez une partie MIME de base et l'ajoutez au message
+    with open(file_path, "rb") as attachment:
+        # Ajouter un type MIME spécifique
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Encodez le fichier en caractères ASCII pour l'envoyer par courrier électronique
+    encoders.encode_base64(part)
+
+    # Ajoutez l'en-tête en tant que paire clé / valeur à la pièce jointe
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {file_path}",
+    )
+
+    msg.attach(part)
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, to, msg.as_string())
+
+    except Exception as e:
+        print(e)
+        return {'error':str(e)}
+    return {'message':'Email sent'}
+
+
 NS_RENDER = Namespace("carto","rendering")
 
 EDIT_STATE = {
@@ -70,6 +149,11 @@ class SavingMode:
             return "Soumettre ST"
         elif mode == SavingMode.ST_AVIS:
             return "Valider (ST)"
+        elif mode == SavingMode.BLOCK_ACCEPTED:
+            return "Valider (B)"
+        elif mode == SavingMode.BLOCK_REFUSED:
+            return "Refuser (B)"
+
 
 
 

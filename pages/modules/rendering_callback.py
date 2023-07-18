@@ -5,25 +5,23 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from pages.modules.config import EDIT_STATE, INFO_BOX_ID, INFO
-from pages.modules.data import FLIGHT, FILE
+from pages.modules.data import FLIGHT, FILE, IS_ST_ALREADY_REQUESTED, INFO_BOX_COMP
 
 
 def set_info_listener_callback():
+    def make_children(mess):
+        return html.Div([INFO_BOX_COMP, html.Div(str(mess))])
+
     @callback(
         Output(INFO_BOX_ID, 'children'),
-        Input(INFO, 'data'),
-        State('url_data','data'))
-    def __set__(data, url_data):
-        (flight,_) = FLIGHT(url_data['uuid'])
-        if 'error' in flight:
-            return "Invalid uuid : " + url_data['uuid']
-            
+        Input(INFO, 'data'))
+    def __set__(data):
         if data is None:
-            return "Nothing"
+            return make_children('Nothing')
         if 'message' in data:
-            return data['message']
+            return make_children(data['message'])
         else:
-            return "Nothing"
+            return make_children('Nothing')
 
 def set_flight_callback(geojson_comp_id ='flight'):
     @callback(
@@ -70,7 +68,7 @@ def set_file_state_comp(comp, fnc : callable):
 def set_trigger_dialog_box(adminPanel):
     from pages.modules.components import SavingMode
     @callback(
-        [Output(adminPanel.get_dialog(), 'open'), Output(adminPanel.get_dialog(), 'children')],
+        [Output(adminPanel.get_dialog(), 'open'), Output(adminPanel.get_dialog(), 'children'),Output(adminPanel.get_submit(), 'children')],
         [Input(adminPanel.get_trigger_dialog_button(),'n_clicks'), Input(adminPanel.get_cancel_button(),'n_clicks'), Input(adminPanel.get_accepter_button(),'n_clicks'), Input(adminPanel.get_refuser_button(),'n_clicks')],
         State('url_data','data'),
         prevent_initial_call=True,
@@ -81,18 +79,22 @@ def set_trigger_dialog_box(adminPanel):
 
         if args[0] is not None and ctx.triggered_id == adminPanel.get_trigger_dialog_button().id:
             if mode == SavingMode.REQUEST_ST:
-                return [True, adminPanel.init_dialog(title="Remarque ?")]
+                adminPanel.set_mode(SavingMode.REQUEST_ST)
+                return [True, adminPanel.init_dialog(title="Remarque ?"), "Remarque au ST"]
             else:
-                return [True, adminPanel.init_dialog(title="Prescription ?")]
+                adminPanel.set_mode(SavingMode.ST_AVIS)
+                return [True, adminPanel.init_dialog(title="Prescription ?"), "Prescription ?"]
         elif args[2] is not None and ctx.triggered_id == adminPanel.get_accepter_button().id:
-            return [True, adminPanel.init_dialog(title="Motif ?")]
+            adminPanel.set_mode(SavingMode.BLOCK_ACCEPTED)
+            return [True, adminPanel.init_dialog(title="Motif ?"), "Prescription acceptée"]
 
         elif args[3] is not None and ctx.triggered_id == adminPanel.get_refuser_button().id:
-            return [True, adminPanel.init_dialog(title="Motif ?")]
+            adminPanel.set_mode(SavingMode.BLOCK_REFUSED)
+            return [True, adminPanel.init_dialog(title="Motif ?"), "Prescription refusée"]
         elif args[1] is not None and ctx.triggered_id == adminPanel.get_cancel_button().id:
-            return [False, adminPanel.init_dialog(title="Motif ?")]    
+            return [False, adminPanel.init_dialog(title="Motif ?"), dash.no_update]    
         else:
-            return [False, dash.no_update]
+            return [False, dash.no_update, dash.no_update]
 def set_init_admin_panel_callback(adminPanel):
     from pages.modules.components import SavingMode
     @callback(
@@ -101,16 +103,16 @@ def set_init_admin_panel_callback(adminPanel):
     )
     def __set__(data):
         st_token = data['st_token']
-        mode = SavingMode.REQUEST_ST if st_token is None else SavingMode.ST_AVIS
+        mode = SavingMode.ST_AVIS if data['st_token'] is not None else SavingMode.REQUEST_ST
         return adminPanel.init_output(mode)
     @callback(
-        [Output(adminPanel.get_trigger_dialog_button(), 'children'), Output(adminPanel.get_submit(), 'children'), Output(adminPanel.get_email_input(), 'disabled'), Output(adminPanel.get_password_input(), 'disabled'), Output(adminPanel.get_accepter_button(), 'disabled'), Output(adminPanel.get_refuser_button(), 'disabled')],
+        [Output(adminPanel.get_trigger_dialog_button(), 'children'), Output(adminPanel.get_email_input(), 'disabled'), Output(adminPanel.get_password_input(), 'disabled'), Output(adminPanel.get_accepter_button(), 'disabled'), Output(adminPanel.get_refuser_button(), 'disabled'), Output(adminPanel.get_trigger_dialog_button(), 'disabled')],
         Input('url_data','data'),
     )
     def __set__(data):
         st_token = data['st_token']
         mode = SavingMode.REQUEST_ST if st_token is None else SavingMode.ST_AVIS
-        return [SavingMode.to_str(mode), SavingMode.to_str(mode), mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS]
+        return [SavingMode.to_str(mode), mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, IS_ST_ALREADY_REQUESTED(data['uuid'])]
 
     
         

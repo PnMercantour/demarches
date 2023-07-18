@@ -1,0 +1,1 @@
+INSERT INTO survol.st_token (token, dossier_id) VALUES (%s, %s);
