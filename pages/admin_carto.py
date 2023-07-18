@@ -16,4 +16,4 @@ file_info = FileInfo()
 admin_panel = AdminPanel(map)
 
 def layout(uuid=None,security_token=None,st_token=None,**kwargs):
-   return html.Div([URL_DATA_COMP(uuid=uuid,security_token=security_token, st_token=st_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})])
+      return html.Div([URL_DATA_COMP(uuid=uuid,security_token=security_token, st_token=st_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})])

@@ -11,6 +11,8 @@ from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, CONFIG, SEND_E
 
 from print_my_report import CartoPrinter, DisplayObj
 
+from threading import Thread
+
 conn = CONN()
 profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(CONFIG('verbose')) , warning = True)
 
@@ -64,6 +66,9 @@ def __get_file_by_number__(dossier_number):
     
 DROP_ZONE_GEOJSON = GeoJSON(data=__get_drop_zone__(),id="comp_drop_zone",options=dict(pointToLayer=NS_RENDER('draw_drop_zone')),cluster=True, superClusterOptions=dict(radius=200))
 LIMITES_GEOJSON = GeoJSON(data=__get_limites__(),id="comp_limites",options=dict(style=NS_RENDER('get_limits_style')))
+
+## CURRENT BACKGROUND
+Background_Task = {}
 
 ## FLIGHT PATH
 
@@ -273,7 +278,7 @@ def __send_to_instruc__(dossier_number, data):
     return resp
 def __send_summary__(to, flight_file_path, dossier):
 
-
+    url = dossier.get_data()['dossier']['attestation']['url']
     mess = f"""
     
     Le dossier n°{dossier.get_number()} a été validé.
@@ -282,13 +287,13 @@ def __send_summary__(to, flight_file_path, dossier):
 
     {str(dossier)}
 
-    Attestation : {dossier.get_date()['dossier']['attestation ']['url']}
+    Attestation : {url}
 
     [Ce message est généré automatiquement, merci de ne pas y répondre]
 
     """
 
-    resp = SEND_EMAIL_WITH_FILE(to,f'Validation dossier n°{dossier.get_number()}',mess,flight_file_path)
+    resp = SEND_EMAIL_WITH_FILE(to,f'Validation dossier n°{dossier.get_number()}',mess,flight_file_path,file_name=f"plan_de_vol_{dossier.get_number()}.pdf")
 
     return resp
 
@@ -354,10 +359,13 @@ def __build_flight__(geojson, dossier):
     info1 = DisplayObj('Dossier Info', str(dossier))
 
     from PIL import Image
+    file_path = f"./pdf/flight_{dossier.get_number()}.pdf"
     printer = CartoPrinter(geojson, title, [info1],logo=Image.open("./assets/logo.png"))
     printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_number()}.pdf", output_dir="./pdf")
 
-    return 'flight_'+str(dossier.get_number())+'.pdf'
+    # send the pdf to the user
+    resp =  __send_summary__("esteban.rodriguez@mercantour-parcnational.fr", file_path, dossier)
+    return resp
 def FILE(dossier_id,force_update=False):
     '''Return the file info (dict)'''
     if dossier_id in file_cache and not force_update:
@@ -416,7 +424,8 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
             return ({"error":"File is not in the right state"}, None)
 
     # COMMON SAVING
-    (flightinfo, geojson) = flight
+    (current_flight, geojson) = flight
+    (last_flight, _) = FLIGHT(file['last_carte']) 
     if geojson is not None:
         uuid = __save_new_flight__(geojson,dossier_id=file['id'])
         file['last_carte'] = uuid
@@ -457,11 +466,11 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
         
         return FLIGHT(uuid)
     elif saveMode == SavingMode.ST_AVIS:
-        print(flightinfo)
+        print(current_flight)
         data = {
             "email" : "esteban.rodriguez@mercantour-parcnational.fr",
             "message" : message,
-            "url": f"http://localhost:8050/admin/{flightinfo['uuid']}",
+            "url": f"http://localhost:8050/admin/{current_flight['uuid']}",
         }
 
         resp = __send_to_instruc__(file['number'], data)
@@ -484,10 +493,12 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
         if 'error' in resp:
             return (resp, None)
 
-        return FLIGHT(flightinfo['uuid'])
+        return FLIGHT(current_flight['uuid'])
     elif saveMode == SavingMode.BLOCK_ACCEPTED:
         # get the newest flight
-        (flightinfo, geojson) = FLIGHT(file['last_carte'])
+
+        (_, geojson) = FLIGHT(file['last_carte'])
+
 
 
         dossier = __get_file_by_number__(file['number'])
@@ -503,14 +514,10 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
 
 
         #Build the pdf
-        file_path = __build_flight__(last, dossier)
-        print('PDF built !')
+        thread = Thread(target=__build_flight__, args=(last, dossier))
+        Background_Task[current_flight['uuid']] = thread
 
-        # send the pdf to the user
-        resp =  __send_summary__("esteban.rodriguez@mercantour-parcnational.fr", file_path, dossier)
-        if 'error' in resp:
-            return (resp, None)
-        return FLIGHT(flightinfo['uuid'])
+        return FLIGHT(current_flight['uuid'])
         
 
 

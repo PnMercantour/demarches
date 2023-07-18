@@ -68,7 +68,7 @@ def set_trigger_dialog_box(adminPanel):
     from pages.modules.components import SavingMode
     @callback(
         [Output(adminPanel.get_dialog(), 'open'), Output(adminPanel.get_dialog(), 'children'),Output(adminPanel.get_submit(), 'children')],
-        [Input(adminPanel.get_trigger_dialog_button(),'n_clicks'), Input(adminPanel.get_cancel_button(),'n_clicks'), Input(adminPanel.get_accepter_button(),'n_clicks'), Input(adminPanel.get_refuser_button(),'n_clicks')],
+        [Input(adminPanel.get_trigger_dialog_button(),'n_clicks'), Input(adminPanel.get_cancel_button(),'n_clicks'), Input(adminPanel.get_accepter_button(),'n_clicks'), Input(adminPanel.get_refuser_button(),'n_clicks'), Input(adminPanel.get_submit(),'n_clicks')],
         State('url_data','data'),
         prevent_initial_call=True,
     )
@@ -91,7 +91,9 @@ def set_trigger_dialog_box(adminPanel):
             adminPanel.set_mode(SavingMode.BLOCK_REFUSED)
             return [True, adminPanel.init_dialog(title="Motif ?"), "Prescription refusée"]
         elif args[1] is not None and ctx.triggered_id == adminPanel.get_cancel_button().id:
-            return [False, adminPanel.init_dialog(title="Motif ?"), dash.no_update]    
+            return [False, adminPanel.init_dialog(title="Motif ?"), dash.no_update] 
+        elif args[4] is not None and ctx.triggered_id == adminPanel.get_submit().id:
+            return [False, dash.no_update, dash.no_update]   
         else:
             return [False, dash.no_update, dash.no_update]
 def set_init_admin_panel_callback(adminPanel):

@@ -46,7 +46,7 @@ def SEND_EMAIL(to,subject,message):
         return {'error':str(e)}
     return {'message':'Email sent'}
 
-def SEND_EMAIL_WITH_FILE(to,subject,message,file_path):
+def SEND_EMAIL_WITH_FILE(to,subject,message,file_path,file_name="file.pdf"):
     port = 465
     smtp_server = "mail.espaces-naturels.fr"
     sender_email = CONFIG("SENDER_EMAIL")
@@ -73,7 +73,7 @@ def SEND_EMAIL_WITH_FILE(to,subject,message,file_path):
     # Ajoutez l'en-tête en tant que paire clé / valeur à la pièce jointe
     part.add_header(
         "Content-Disposition",
-        f"attachment; filename= {file_path}",
+        f"attachment; filename= {file_name}",
     )
 
     msg.attach(part)
