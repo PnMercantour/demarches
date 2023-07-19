@@ -194,6 +194,17 @@ def __generate_st_token__(dossier_id):
     cur.close()
     return uuid
 
+def __delete_st_token__(dossier_id):
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM survol.st_token WHERE dossier_id = %s",(dossier_id,))
+        conn.commit()
+    except psycopg.Error as e:
+        print(e)
+        return f'{{"error":"{str(e)}"}}'
+    cur.close()
+    return {"success":"The token has been deleted"}
+
 def __check_file_state__(dossier_number, savingMode: SavingMode):
     dossier = __get_file_by_number__(dossier_number)
     state = dossier.force_fetch().get_dossier_state()
@@ -277,8 +288,17 @@ def __send_to_instruc__(dossier_number, data):
 
     return resp
 def __send_summary__(to, flight_file_path, dossier):
+    import time
+    attestation = dossier.get_data()['dossier']['attestation']
 
-    url = dossier.get_data()['dossier']['attestation']['url']
+    while(attestation == None):
+        time.sleep(1)
+        print("Waiting for attestation")
+        attestation = dossier.force_fetch().get_data()['dossier']['attestation']
+    
+    url = attestation['url']
+
+
     mess = f"""
     
     Le dossier n°{dossier.get_number()} a été validé.
@@ -317,7 +337,7 @@ def __update_file_annotation__(dossier_number, instructeur_id, message="None"):
 
     modifier = AnnotationModifier(profile, dossier, instructeur_id)
     
-    resp = modifier.set_annotation(dossier.get_annotations()['url-instructeur'], message)
+    resp = modifier.set_annotation(dossier.get_annotations()['st-prescription'], message)
     return {"success":resp} if resp else {"error":"An error occured"}
 
 def __is_st_token_valid__(dossier_number, security_token):
@@ -339,7 +359,7 @@ def __is_st_token_valid__(dossier_number, security_token):
 def __is_security_token_valid__(dossier_number, security_token):
     try:
         dossier = __get_file_by_number__(dossier_number)
-        return dossier.get_anotations()['security-token']['stringValue'] == security_token
+        return dossier.get_annotations()['security-token']['stringValue'] == security_token
     except:
         return False
 
@@ -355,6 +375,7 @@ def __is_instructeur_password_valid__(dossier_number, email, password):
     return False
     
 def __build_flight__(geojson, dossier):
+    import time
     title = DisplayObj('Plan de vol', f"Plan de vol du dossier n°{dossier.get_number()}")
     info1 = DisplayObj('Dossier Info', str(dossier))
 
@@ -363,8 +384,17 @@ def __build_flight__(geojson, dossier):
     printer = CartoPrinter(geojson, title, [info1],logo=Image.open("./assets/logo.png"))
     printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_number()}.pdf", output_dir="./pdf")
 
-    # send the pdf to the user
-    resp =  __send_summary__("esteban.rodriguez@mercantour-parcnational.fr", file_path, dossier)
+    # try sending the email repeatedly
+    resp = None
+    while(True):
+        try:
+            resp =  __send_summary__("esteban.rodriguez@mercantour-parcnational.fr", file_path, dossier)
+            break
+        except Exception as e:
+            print(e)
+            time.sleep(1)
+            continue
+
     return resp
 def FILE(dossier_id,force_update=False):
     '''Return the file info (dict)'''
@@ -397,20 +427,27 @@ def IS_ST_ALREADY_REQUESTED(flight_uuid):
         print(e)
         return False
 
+def IS_FILE_CLOSED(flight_uuid):
+    '''Return True if the file is closed (accepted or refused)'''
+    (info,_) = FLIGHT(flight_uuid)
+    dossier_id = info['dossier_id']
+    file = FILE(dossier_id)
+    return file['state'] == 'accepte' or file['state'] == 'refuse' 
+            
+
 
 
 def SECURITY_CHECK(dossier_number, security):
     '''Return True if the security is valid for the dossier_id'''
-    print(security)
+    secu = False
     if 'security-token' in security:
-        return __is_security_token_valid__(dossier_number, security['security-token'])
+        secu = __is_security_token_valid__(dossier_number, security['security-token'])
     elif 'st_token' in security and security['st_token'] is not None:
-        return __is_st_token_valid__(dossier_number, security['st_token'])
+        secu = __is_st_token_valid__(dossier_number, security['st_token'])
     elif 'password' in security and 'email' in security:
-        return __is_instructeur_password_valid__(dossier_number, security['email'], security['password'])
-    else:
-        return False
-
+        secu = __is_instructeur_password_valid__(dossier_number, security['email'], security['password'])
+    print("Security passed" if secu else "Security failed")
+    return secu
 
 ## SAVE DATA
 
@@ -504,6 +541,12 @@ def SAVE_FLIGHT(file, flight, saveMode:SavingMode, security, message=None):
         dossier = __get_file_by_number__(file['number'])
 
         __change_file_state__(file['number'], security['password'], DossierState.ACCEPTER)
+
+        #delete st token
+        resp = __delete_st_token__(file['id'])
+
+        if 'error' in resp:
+            return (resp, None)
 
         last = {
             "type": "FeatureCollection",

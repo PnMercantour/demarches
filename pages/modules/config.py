@@ -153,6 +153,8 @@ class SavingMode:
             return "Valider (B)"
         elif mode == SavingMode.BLOCK_REFUSED:
             return "Refuser (B)"
+        elif mode == SavingMode.UPDATE:
+            return "Mettre à jour"
 
 
 

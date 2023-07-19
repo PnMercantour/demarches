@@ -21,7 +21,9 @@ def set_output_if_edit_callback(output, data_to_set, default):
         if 'error' in flight:
             return default
         file = FILE(flight['dossier_id'])
-        return data_to_set if EDIT_STATE[file['state']] and SECURITY_CHECK(file['number'], {"security-token":data['security_token']}) else default
+        secu = EDIT_STATE[file['state']] and SECURITY_CHECK(file['number'], {"security-token":data['security_token']})
+        print("Is secu : ",secu)
+        return data_to_set if secu else default
 
 def set_on_save_callback(savingMode:SavingMode, edit_control):
     @callback(

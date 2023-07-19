@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from pages.modules.config import EDIT_STATE, INFO_BOX_ID, INFO
-from pages.modules.data import FLIGHT, FILE, IS_ST_ALREADY_REQUESTED, INFO_BOX_COMP
+from pages.modules.data import FLIGHT, FILE, IS_ST_ALREADY_REQUESTED, INFO_BOX_COMP, IS_FILE_CLOSED
 
 
 def set_info_listener_callback():
@@ -107,13 +107,16 @@ def set_init_admin_panel_callback(adminPanel):
         mode = SavingMode.ST_AVIS if data['st_token'] is not None else SavingMode.REQUEST_ST
         return adminPanel.init_output(mode)
     @callback(
-        [Output(adminPanel.get_trigger_dialog_button(), 'children'), Output(adminPanel.get_email_input(), 'disabled'), Output(adminPanel.get_password_input(), 'disabled'), Output(adminPanel.get_accepter_button(), 'disabled'), Output(adminPanel.get_refuser_button(), 'disabled'), Output(adminPanel.get_trigger_dialog_button(), 'disabled')],
+        [Output(adminPanel.get_trigger_dialog_button(), 'children'), Output(adminPanel.get_email_input(), 'disabled'), Output(adminPanel.get_password_input(), 'disabled'), Output(adminPanel.get_accepter_button(), 'hidden'), Output(adminPanel.get_refuser_button(), 'hidden'), Output(adminPanel.get_trigger_dialog_button(), 'hidden'), Output(adminPanel.get_login_field(), 'hidden')],
         Input('url_data','data'),
     )
     def __set__(data):
         st_token = data['st_token']
         mode = SavingMode.REQUEST_ST if st_token is None else SavingMode.ST_AVIS
-        return [SavingMode.to_str(mode), mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, mode == SavingMode.ST_AVIS, IS_ST_ALREADY_REQUESTED(data['uuid'])]
+        disabled_login = (mode == SavingMode.ST_AVIS) or IS_FILE_CLOSED(data['uuid'])
+        disabled_submit = (IS_ST_ALREADY_REQUESTED(data['uuid']) and mode == SavingMode.REQUEST_ST) or  IS_FILE_CLOSED(data['uuid'])
+        disabled_block = IS_FILE_CLOSED(data['uuid']) or mode == SavingMode.ST_AVIS
+        return [SavingMode.to_str(mode), disabled_login, disabled_login, disabled_block, disabled_block, disabled_submit, disabled_login]
 
     
         
