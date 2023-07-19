@@ -34,33 +34,33 @@ def set_flight_callback(geojson_comp_id ='flight'):
             return None
         return json
 
-def set_file_info_callback(output):
-    @callback(
-        output,
-        Input('url_data','data'),
-    )
-    def edit_file_info_callback(data):
-        (info,_) = FLIGHT(data['uuid'])
-        if 'error' in info:
-            return ["None","None","None","Invalid uuid"]
-        data = FILE(info['dossier_id'])
-        return [data['state'],data['number'],data['creation_date'], f"Can edit : {EDIT_STATE[data['state']]}"]
+# def set_file_info_callback(output):
+#     @callback(
+#         output,
+#         Input('url_data','data'),
+#     )
+#     def edit_file_info_callback(data):
+#         (info,_) = FLIGHT(data['uuid'])
+#         if 'error' in info:
+#             return ["None","None","None","Invalid uuid"]
+#         data = FILE(info['dossier_id'])
+#         return [data['state'],data['number'],data['creation_date'], f"Can edit : {EDIT_STATE[data['state']]}"]
 
 
 
 
 ## MAP RENDER CALLBACKS
-def set_file_state_comp(comp, fnc : callable):
-    @callback(
-        Output(comp, 'children'),
-        Input('url_data','data')
-    )
-    def __set__(data):
-        (info,_) = FLIGHT(data['uuid'])
-        if 'error' in info:
-            return None
-        file = FILE(info['dossier_id'], force_update=True)
-        return fnc(file)
+# def set_file_state_comp(id, fnc : callable):
+#     @callback(
+#         Output(id, 'children'),
+#         Input('url_data','data')
+#     )
+#     def __set__(data):
+#         (info,_) = FLIGHT(data['uuid'])
+#         if 'error' in info:
+#             return None
+#         file = FILE(info['dossier_id'], force_update=True)
+#         return fnc(file)
 
 
 ## Admin Panel Callbacks

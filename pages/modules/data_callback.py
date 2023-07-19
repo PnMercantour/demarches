@@ -11,19 +11,19 @@ import diskcache
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-def set_output_if_edit_callback(output, data_to_set, default):
-    @callback(
-        output,
-        Input('url_data','data')
-    )
-    def __set__(data):
-        (flight,_) = FLIGHT(data['uuid'])
-        if 'error' in flight:
-            return default
-        file = FILE(flight['dossier_id'])
-        secu = EDIT_STATE[file['state']] and SECURITY_CHECK(file['number'], {"security-token":data['security_token']})
-        print("Is secu : ",secu)
-        return data_to_set if secu else default
+# def set_output_if_edit_callback(output, data_to_set, default):
+#     @callback(
+#         output,
+#         Input('url_data','data')
+#     )
+#     def __set__(data):
+#         (flight,_) = FLIGHT(data['uuid'])
+#         if 'error' in flight:
+#             return default
+#         file = FILE(flight['dossier_id'])
+#         secu = EDIT_STATE[file['state']] and SECURITY_CHECK(file['number'], {"security-token":data['security_token']})
+#         print("Is secu : ",secu)
+#         return data_to_set if secu else default
 
 def set_on_save_callback(savingMode:SavingMode, edit_control):
     @callback(

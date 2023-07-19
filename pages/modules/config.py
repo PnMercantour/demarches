@@ -9,6 +9,15 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 ## GLOBAL CONFIGURATION
+class PageConfig():
+    def __init__(self, page_name):
+        self.page_name = page_name
+    @property
+    def page_name(self):
+        return self.__page_name
+    @page_name.setter
+    def page_name(self, value):
+        self.__page_name = value
 def CONFIG(key):
     value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
     if value == "True":
@@ -133,6 +142,11 @@ STATE_PROPS = {
         'text' : 'Sans suite'
     },
 }
+
+class USER_TYPE:
+    ADMIN = 0,
+    USER = 1,
+    ST = 2,
 
 class SavingMode:
     CREATE = 0

@@ -13,6 +13,9 @@ from print_my_report import CartoPrinter, DisplayObj
 
 from threading import Thread
 
+class Flight():
+    pass
+
 conn = CONN()
 profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(CONFIG('verbose')) , warning = True)
 
