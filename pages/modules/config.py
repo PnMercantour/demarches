@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+
 ## GLOBAL CONFIGURATION
 class PageConfig():
     def __init__(self, page_name):
@@ -18,6 +19,9 @@ class PageConfig():
     @page_name.setter
     def page_name(self, value):
         self.__page_name = value
+
+
+
 def CONFIG(key):
     value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
     if value == "True":
