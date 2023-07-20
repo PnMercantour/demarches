@@ -109,9 +109,9 @@ def generate_file_ds(carto_id):
 
     data = {
         #url edit mode for petitionnaire
-        "champ_Q2hhbXAtMzQzNjE0Nw==" : f"http://localhost:8050/edit/{carto_id}/{str(security_token)}",
+        "champ_Q2hhbXAtMzQzNjE0Nw==" : f"http://51.210.52.71:8050/edit/{carto_id}/{str(security_token)}",
         #url for instructor
-        "champ_Q2hhbXAtMzQzMTI3MA==" : f"http://localhost:8050/instruct/{carto_id}",
+        "champ_Q2hhbXAtMzQzMTI3MA==" : f"http://51.210.52.71:8050/admin/{carto_id}",
         #security token for verification
         "champ_Q2hhbXAtMzQzNTcxMg==" : str(security_token),
     }
