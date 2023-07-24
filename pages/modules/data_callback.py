@@ -5,6 +5,7 @@ import dash
 from pages.modules.data import SECURITY_CHECK, FILE, FLIGHT, SAVE_FLIGHT
 from pages.modules.config import EDIT_STATE, INFO, SAVE_BUTTON_ID,SavingMode
 from threading import Thread
+from pages.modules.components_temp.global_components import APP_INFO_BOX
 
  # Diskcache for non-production apps when developing locally
 
@@ -25,7 +26,7 @@ from threading import Thread
 
 def set_on_save_callback(savingMode:SavingMode, edit_control):
     @callback(
-        Output(INFO, 'data',allow_duplicate=True),
+        APP_INFO_BOX.get_output(),
         Input(SAVE_BUTTON_ID, 'n_clicks'),
         State(edit_control, 'geojson'),
         State('url_data','data'),
@@ -91,29 +92,29 @@ def set_admin_panel_callback(adminPanel, edit_control):
     #     else:
     #         return [dash.no_update, dash.no_update]
 
-    @callback(
-        [Output('long-task', "children"), Output(INFO, 'data',allow_duplicate=True)],
-        Input('long-task', "hidden"),
-        State('url_data', "data"),
-        prevent_initial_call=True,
-        background=True,
-        manager=background_callback_manager
-    )
-    def __set__(hidden, data):
-        if hidden:
-            print('Building PDF')
-            print(Background_Task)
-            uuid=data['uuid']
-            (current_flight,_) = FLIGHT(uuid)
-            if current_flight['uuid'] in Background_Task:
-                task = Background_Task[current_flight['uuid']]
-                task.start()
-                task.join()
+    # @callback(
+    #     [Output('long-task', "children"), Output(INFO, 'data',allow_duplicate=True)],
+    #     Input('long-task', "hidden"),
+    #     State('url_data', "data"),
+    #     prevent_initial_call=True,
+    #     background=True,
+    #     manager=background_callback_manager
+    # )
+    # def __set__(hidden, data):
+    #     if hidden:
+    #         print('Building PDF')
+    #         print(Background_Task)
+    #         uuid=data['uuid']
+    #         (current_flight,_) = FLIGHT(uuid)
+    #         if current_flight['uuid'] in Background_Task:
+    #             task = Background_Task[current_flight['uuid']]
+    #             task.start()
+    #             task.join()
 
 
-            return ["", {"message":"Pdf built !"}]
-        else:
-            return [dash.no_update, dash.no_update]
+    #         return ["", {"message":"Pdf built !"}]
+    #     else:
+    #         return [dash.no_update, dash.no_update]
 
 
       

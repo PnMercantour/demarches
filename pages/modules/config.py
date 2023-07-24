@@ -8,6 +8,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+import dotenv
+
+dotenv.load_dotenv()
 
 ## GLOBAL CONFIGURATION
 class PageConfig():

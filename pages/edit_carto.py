@@ -6,7 +6,6 @@ import dash_leaflet as dl
 from pages.modules.data import DROP_ZONE_GEOJSON, URL_DATA_COMP, INFO_BOX_COMP, LIMITES_GEOJSON, FLIGHT
 from pages.modules.config import NS_RENDER, SavingMode, PageConfig
 from pages.modules.components import Carte, FileInfo, FlightSaver
-from pages.modules.rendering_callback import set_info_listener_callback
 from pages.modules.components_temp.data_components import IncomingData
 dash.register_page(__name__, path='/edit',path_template='/edit/<uuid>/<security_token>')
 
@@ -40,7 +39,7 @@ def layout(uuid=None,security_token=None):
 
 ## CALLBACKS
 
-set_info_listener_callback()
+# set_info_listener_callback()
 # set_flight_callback()
 
 

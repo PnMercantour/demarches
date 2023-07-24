@@ -243,14 +243,6 @@ class AdminPanel(html.Div, IBaseComponent):
         callback_builder.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_trigger_id()], __set__, ['data', 'hidden'], prevent_initial_call=True)
 
         from pages.modules.data import Background_Task
-        # @callback(
-        # [Output(self.get_id(LoadingBox.TRIGGER_LOADING), "children"), Output(INFO, 'data',allow_duplicate=True)],
-        # Input(self.get_id(LoadingBox.TRIGGER_LOADING), "hidden"),
-        # State('url_data', "data"),
-        # prevent_initial_call=True,
-        # background=True,
-        # manager=background_callback_manager
-        # )
 
         callback_builder_long = SingleInputCallback(LOADING_BOX.get_trigger_id(),input_prop = "hidden")
         callback_builder_long.add_state(self.incoming_data, "data")
@@ -318,10 +310,13 @@ class AdminPanel(html.Div, IBaseComponent):
             #TODO: refacto STATE COMPONENT
             print(ctx.triggered_id)
             if args[0] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_TRIGGER_DIALOG):
+
                 return True
             elif args[2] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_ACCEPTER):
+                self.mode = SavingMode.BLOCK_ACCEPTED
                 return True
             elif args[3] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_REFUSER):
+                self.mode = SavingMode.BLOCK_REFUSED
                 return True
             elif args[1] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_CANCEL):
                 return False
@@ -333,30 +328,30 @@ class AdminPanel(html.Div, IBaseComponent):
     def set_mode(self, mode: SavingMode):
         self.mode = mode
     
-    def get_login_field(self):
-        return self.get_id(AdminPanel.LOGIN_FIELD)
-    def get_children(self):
-        return self.children
-    def get_mode(self):
-        return self.mode
-    def get_email_input(self):
-        return self.get_id(AdminPanel.F_EMAIL)
-    def get_password_input(self):
-        return self.get_id(AdminPanel.F_PASSWORD)
-    def get_submit(self):
-        return self.get_id(AdminPanel.B_SUBMIT)
-    def get_accepter_button(self):
-        return self.get_id(AdminPanel.B_ACCEPTER)
-    def get_refuser_button(self):
-        return self.get_id(AdminPanel.B_REFUSER)
-    def get_form(self):
-        return self.get_id(AdminPanel.FORM)
-    def get_avis_input(self):
-        return self.get_id(AdminPanel.F_AVIS)
-    def get_trigger_dialog_button(self):
-        return self.get_id(AdminPanel.B_TRIGGER_DIALOG)
-    def get_dialog(self):
-        return self.get_id(AdminPanel.DIALOG_BOX)
-    def get_cancel_button(self):
-        return self.get_id(AdminPanel.B_CANCEL)
+    # def get_login_field(self):
+    #     return self.get_id(AdminPanel.LOGIN_FIELD)
+    # def get_children(self):
+    #     return self.children
+    # def get_mode(self):
+    #     return self.mode
+    # def get_email_input(self):
+    #     return self.get_id(AdminPanel.F_EMAIL)
+    # def get_password_input(self):
+    #     return self.get_id(AdminPanel.F_PASSWORD)
+    # def get_submit(self):
+    #     return self.get_id(AdminPanel.B_SUBMIT)
+    # def get_accepter_button(self):
+    #     return self.get_id(AdminPanel.B_ACCEPTER)
+    # def get_refuser_button(self):
+    #     return self.get_id(AdminPanel.B_REFUSER)
+    # def get_form(self):
+    #     return self.get_id(AdminPanel.FORM)
+    # def get_avis_input(self):
+    #     return self.get_id(AdminPanel.F_AVIS)
+    # def get_trigger_dialog_button(self):
+    #     return self.get_id(AdminPanel.B_TRIGGER_DIALOG)
+    # def get_dialog(self):
+    #     return self.get_id(AdminPanel.DIALOG_BOX)
+    # def get_cancel_button(self):
+    #     return self.get_id(AdminPanel.B_CANCEL)
 

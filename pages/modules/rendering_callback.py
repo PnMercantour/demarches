@@ -8,19 +8,19 @@ from pages.modules.config import EDIT_STATE, INFO_BOX_ID, INFO
 from pages.modules.data import FLIGHT, FILE, IS_ST_ALREADY_REQUESTED, INFO_BOX_COMP, IS_FILE_CLOSED
 
 
-def set_info_listener_callback():
+# def set_info_listener_callback():
 
 
-    @callback(
-        Output(INFO_BOX_ID, 'children'),
-        Input(INFO, 'data'))
-    def __set__(data):
-        if data is None:
-            return 'Nothing'
-        if 'message' in data:
-            return data['message']
-        else:
-            return 'Nothing'
+#     @callback(
+#         Output(INFO_BOX_ID, 'children'),
+#         Input(INFO, 'data'))
+#     def __set__(data):
+#         if data is None:
+#             return 'Nothing'
+#         if 'message' in data:
+#             return data['message']
+#         else:
+#             return 'Nothing'
 
 # def set_flight_callback(geojson_comp_id ='flight'):
 #     @callback(

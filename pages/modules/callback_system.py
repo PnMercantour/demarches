@@ -1,5 +1,10 @@
 from dash.dependencies import Input, Output, State
 from collections.abc import Callable
+from pages.modules.managers.security_manager import ISecurityManager
+from pages.modules.managers.action_manager import IAction
+from dash import callback
+
+
 class CustomCallback():
     def __init__(self):
         self.states = []
@@ -45,7 +50,6 @@ class SingleInputCallback(CustomCallback):
         self.input = Input(input_id, input_prop)
 
     def set_callback(self, output_ids: list, fnc: Callable[[any,], list], output_properties="children", prevent_initial_call=True, **kwargs) -> None:
-        from dash import callback
         @callback(
             super().set_callback(output_ids, fnc, output_properties),
             self.input,
@@ -55,8 +59,4 @@ class SingleInputCallback(CustomCallback):
         )
         def __set__(data, *args):
             return fnc(data, *args)
-
-
-    
-
 

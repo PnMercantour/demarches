@@ -1,6 +1,7 @@
 .venv
 .vscode
 .env
+test.py
 
 # pycache
 __pycache__/

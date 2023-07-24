@@ -3,6 +3,7 @@ from dash_leaflet import GeoJSON
 import psycopg
 import json
 from uuid import uuid4
+from enum import Enum
 
 
 from demarches_simpy import Profile, Dossier, DossierState, MessageSender, StateModifier, AnnotationModifier
@@ -12,9 +13,76 @@ from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, CONFIG, SEND_E
 from print_my_report import CartoPrinter, DisplayObj
 
 from threading import Thread
+class SecurityLevel(Enum):
+    AUTH=0 # Action requires authentication
+    NO_AUTH=1 # Action does not require authentication
 
-class Flight():
-    pass
+class SQL_Fetcher():
+    def __init__(self):
+        self.CONN = CONN()
+
+
+    def fetch_sql(self, sql_file: str = None, sql_request: str = None, request_args=None) -> list[dict]:
+            
+        if sql_file == None and sql_request == None:
+            raise Exception("sql_file or sql_request must be defined")
+        try:
+            request = sql_request if sql_request != None else open(sql_file, 'r').read()
+            print('SQL REQUEST : ', request)
+            with self.CONN.cursor() as cursor:
+                cursor.execute(request, request_args)
+                return cursor.fetchall()
+        except psycopg.errors as e:
+            return {"message": f"SQL ERROR {str(e)}", "type":"error"}
+
+class Flight(SQL_Fetcher):
+
+    @staticmethod
+    def build_complete_geojson(flight):
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                flight.get_geojson(),
+            ]
+        }
+
+
+    def __init__(self, manager, id: str, dossier_id: str, creation_date: str):
+        super().__init__()
+        self.id = id
+        self.manager = manager
+        self.dossier_id = dossier_id
+        self.creation_date = creation_date
+        self.last_flight : Flight = None
+        self.geojson = None
+
+    def get_id(self):
+        return self.id
+
+
+    def get_attached_dossier(self) -> Dossier:
+        return self.manager.get_dossier_by_id(self.dossier_id)
+    
+    def get_geojson(self):
+        if self.geojson == None:
+            resp = self.fetch_sql(sql_request="SELECT geojson FROM survol.flight_geojson WHERE uuid = %s", request_args=[self.id])
+            if len(resp) == 0:
+                return None
+            self.geojson = resp[0][0]
+        return self.geojson
+    
+    def get_last_flight(self):
+        if self.last_flight == None:
+            resp = self.fetch_sql(sql_request="SELECT survol.last_flight(%s)", request_args=[self.id])
+            if len(resp) == 0:
+                return None
+            last_uuid = resp[0][0][0]['id']
+            self.last_flight = self.manager.get_flight_by_uuid(last_uuid)
+        return self.last_flight
+
+
+    def __str__(self):
+        return f"Flight({self.id},{self.dossier_id},{self.creation_date})"
 
 conn = CONN()
 profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(CONFIG('verbose')) , warning = True)
@@ -47,7 +115,7 @@ def __get_drop_zone__():
         return cache['drop_zone']
     reinit_transaction()
     cur = conn.cursor()
-    cur.execute(open('./sql/drop_zone.sql','r').read())
+    cur.execute(open('./sql/features/drop_zone.sql','r').read())
     rows = cur.fetchall()
     cache['drop_zone'] = json.loads(rows[0][0])
     return cache['drop_zone']
@@ -57,7 +125,7 @@ def __get_limites__():
         return cache['limites']
     reinit_transaction()
     cur = conn.cursor()
-    cur.execute(open('./sql/limites.sql','r').read())
+    cur.execute(open('./sql/features/limites.sql','r').read())
     rows = cur.fetchall()
     cache['limites'] = json.loads(rows[0][0])
     return cache['limites']
