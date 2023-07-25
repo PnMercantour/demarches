@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:    
+    from pages.modules.managers import DataManager
+    from pages.modules.managers.security_manager import ISecurityManager
+
 import dash_leaflet as dl
 from dash import DiskcacheManager
 from dotenv import dotenv_values
@@ -8,14 +16,24 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+
 import dotenv
+
+from enum import Enum
+
+class SecurityLevel(Enum):
+    AUTH=0 # Action requires authentication
+    NO_AUTH=1 # Action does not require authentication
+
 
 dotenv.load_dotenv()
 
 ## GLOBAL CONFIGURATION
 class PageConfig():
-    def __init__(self, page_name):
+    def __init__(self, page_name, data_manager : DataManager = None, security_manager : ISecurityManager = None):
         self.page_name = page_name
+        self.data_manager = data_manager
+        self.security_manager = security_manager
     @property
     def page_name(self):
         return self.__page_name
@@ -23,9 +41,24 @@ class PageConfig():
     def page_name(self, value):
         self.__page_name = value
 
+    @property
+    def data_manager(self) -> DataManager:
+        return self.__data_manager
+    @data_manager.setter
+    def data_manager(self, value):
+        self.__data_manager = value
+
+    @property
+    def security_manager(self) -> ISecurityManager:
+        return self.__security_manager
+    @security_manager.setter
+    def security_manager(self, value):
+        self.__security_manager = value
 
 
-def CONFIG(key):
+
+
+def config_env(key):
     value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
     if value == "True":
         return True
@@ -34,13 +67,38 @@ def CONFIG(key):
     else:
         return value
 
+import json
+config_file = json.loads(open('./config.json','r',encoding='utf-8').read())
+
+def CONFIG(path,default : str ="")->str:
+    '''exemple_key/exemple_key2/exemple_key3'''
+    
+    key = path.split("/")
+
+    value = config_file
+
+    while len(key) > 0:
+        if key[0] in value:
+            value = value[key.pop(0)]
+        else:
+            return default
+
+    return value
+
+
+
+
+    
+
+
+
 
 ## EMAIL CONFIGURATION
 def SEND_EMAIL(to,subject,message):
     port = 465
     smtp_server = "mail.espaces-naturels.fr"
-    sender_email = CONFIG("SENDER_EMAIL")
-    password = CONFIG("SENDER_PASSWORD")
+    sender_email = config_env("SENDER_EMAIL")
+    password = config_env("SENDER_PASSWORD")
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
@@ -65,8 +123,8 @@ def SEND_EMAIL(to,subject,message):
 def SEND_EMAIL_WITH_FILE(to,subject,message,file_path,file_name="file.pdf"):
     port = 465
     smtp_server = "mail.espaces-naturels.fr"
-    sender_email = CONFIG("SENDER_EMAIL")
-    password = CONFIG("SENDER_PASSWORD")
+    sender_email = config_env("SENDER_EMAIL")
+    password = config_env("SENDER_PASSWORD")
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
@@ -185,7 +243,7 @@ class SavingMode:
 ## DB CONFIGURATION
 def CONN():
     from psycopg import connect
-    conn = connect(CONFIG("DB_CONNECTION"))
+    conn = connect(config_env("DB_CONNECTION"))
     if conn is None:
         print("Error")
     else:
@@ -234,7 +292,7 @@ tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
                 "&TILEMATRIX={z}" +
                 "&TILEROW={y}" +
                 "&TILECOL={x}")
-tile_url = tile_url.replace("CLEF",CONFIG("IGN_KEY"))
+tile_url = tile_url.replace("CLEF",config_env("IGN_KEY"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 

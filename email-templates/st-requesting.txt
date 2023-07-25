@@ -1,0 +1,14 @@
+  Bonjour,
+    Vous trouverez ci-joint le lien vers le dossier n°{dossier_number} :
+    {dossier_url}
+
+    Pour valider et visualiser le vol de ce dossier veuillez cliquer sur le lien
+    sécurisé suivant :
+    {url}
+
+    Remarque : {remarque}
+
+    Cordialement,
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
+

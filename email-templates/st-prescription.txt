@@ -1,0 +1,13 @@
+Le ST du dossier n°{dossier_number} a validé le dossier.
+
+Prescription : {prescription}
+
+Vous pouvez consulter et modifier la prescription sur Démarches Simplifiées,
+
+pour valider ou refuser le dossier merci de cliquer sur le lien suivant :
+{url}
+
+
+[Ce message est généré automatiquement, merci de ne pas y répondre]
+
+

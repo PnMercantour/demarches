@@ -8,15 +8,19 @@ from pages.modules.config import NS_RENDER, SavingMode,INFO, PageConfig
 from pages.modules.components import Carte, FileInfo, FlightSaver,AdminPanel
 from pages.modules.components_temp.data_components import IncomingData
 from pages.modules.components_temp.global_components import APP_INFO_BOX, CACHE
-from pages.modules.managers import DataManager, AdminSecurity
+from pages.modules.managers import DataManager, AdminSecurity, STSecurity
 
 dash.register_page(__name__, path='/admin',path_template='/admin/<uuid>')
-config = PageConfig("admin")
-url_data = IncomingData(config)
 
 ## MANAGERS
-data_manager = DataManager(url_data)
-security_manager = AdminSecurity(data_manager)
+data_manager = DataManager()
+admin_security_manager = AdminSecurity(data_manager)
+st_security_manager = STSecurity(data_manager)
+
+
+config = PageConfig("admin", data_manager, admin_security_manager)
+url_data = IncomingData(config)
+
 
 
 
@@ -26,8 +30,8 @@ security_manager = AdminSecurity(data_manager)
 map = Carte(config,forceEdit=True,incoming_data=url_data)
 
 ## FETCHING FEATURES
-limites_data = CACHE.get_feature('limites', security_manager) 
-drop_zone_data = CACHE.get_feature('drop_zone', security_manager)
+limites_data = CACHE.get_feature('limites', admin_security_manager) 
+drop_zone_data = CACHE.get_feature('drop_zone', admin_security_manager)
 
 drop_zone = dl.GeoJSON(data=drop_zone_data,id=map.set_id("comp_drop_zone"),options=dict(pointToLayer=NS_RENDER('draw_drop_zone')),cluster=True, superClusterOptions=dict(radius=200))
 limites =  dl.GeoJSON(data=limites_data,id=map.set_id("comp_limites"),options=dict(style=NS_RENDER('get_limits_style')))
@@ -59,5 +63,7 @@ def layout(uuid=None,security_token=None,st_token=None,**kwargs):
             'security_token':security_token,
             'st_token':st_token
       }
+      if st_token != None:
+            config.security_manager = st_security_manager
       url_data.set_data(data)
       return html.Div([url_data, URL_DATA_COMP(uuid=uuid,security_token=security_token, st_token=st_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})])

@@ -10,7 +10,8 @@ from pages.modules.interfaces import IBaseComponent
 from pages.modules.data import FILE, FLIGHT, SECURITY_CHECK, IS_FILE_CLOSED, IS_ST_ALREADY_REQUESTED, SAVE_FLIGHT
 from pages.modules.callback_system import CustomCallback, SingleInputCallback
 from pages.modules.components_temp.global_components import LOADING_BOX, APP_INFO_BOX
-
+from pages.modules.components_temp.data_components import TriggerCallbackButton, IncomingData
+from pages.modules.managers import DataManager
 
 import diskcache
 cache = diskcache.Cache("./cache")
@@ -139,6 +140,24 @@ class AdminPanel(html.Div, IBaseComponent):
     DIALOG_BOX = 'dialog_box'
     FORM = 'form'
 
+    #MODE
+    ACCEPTER_ACTION = 0
+    REFUSER_ACTION = 1
+    SUBMIT_ACTION = 2
+
+
+    def process_connection(self, data, email, password):
+        uuid = data['uuid']
+        st_token = data['st_token']
+
+        self.config.security_manager.login({
+                'uuid':uuid,
+                'email':email,
+                'password':password,
+                'st_token': st_token
+            })
+
+
     def __fnc_admin_panel_init__(self, data):
         #TODO: refacto STATE COMPONENT
         st_token = data['st_token']
@@ -146,11 +165,121 @@ class AdminPanel(html.Div, IBaseComponent):
         mode = SavingMode.ST_AVIS if data['st_token'] is not None else SavingMode.REQUEST_ST
         return self.init_output(mode,data)
 
-    def __init__(self,pageConfig: PageConfig, map: Carte, incoming_data : CustomCallback):
-        IBaseComponent.__init__(self, pageConfig)
-        super().__init__(children=self.init_output(SavingMode.REQUEST_ST), id=self.get_prefix(), style=self.__get_root_style__())
+
+    ## REDIRECTION FNC
+    def __fnc_st_request_trigger__(self, packed_actions, avis, uuid, dossier):
+        from pages.modules.managers import SendSTRequest, GenerateSTToken
+        from pages.modules.config import CONFIG
+
+
+        #Get the correct message skeleton from config
+
+        skeleton = CONFIG("email-templates/st-requesting")
+
+        st_request = SendSTRequest(self.config.data_manager,skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), avis)
+        st_token = GenerateSTToken(self.config.data_manager, dossier)
+        
+
+        packed_actions.add_action(st_token)
+        packed_actions.add_action(st_request)
+
+
+
+        return [self.config.security_manager.perform_action(packed_actions),True]
+
+    def __fnc_st_prescription_trigger__(self, packed_actions, avis, uuid, dossier):
+        from pages.modules.managers import SendInstruct, SetAnnotation
+        from pages.modules.config import CONFIG
+
+        #Get the correct message skeleton from config
+        skeleton = CONFIG("email-templates/st-prescription")
+
+        st_prescription = SendInstruct(self.config.data_manager,skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), avis)
+        set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("ds_label_field/st-prescription"))
+
+        packed_actions.add_action(set_annotation)
+        packed_actions.add_action(st_prescription)
+
+        return [self.config.security_manager.perform_action(packed_actions),True]
+    
+    def __fnc_st_redirection_trigger__(self, data, geojson, email, password, avis):
+        from pages.modules.managers import PackedActions, SaveFlight
+
+        uuid = data['uuid']
+        dossier =  self.config.data_manager.get_flight_by_uuid(uuid).get_attached_dossier()
+        st_token = data['st_token']
+
+        self.process_connection(data, email, password)
+        if not self.config.security_manager.is_logged:
+            return [{"message" : "Invalid credentials", 'type':"error"}, False]
+        
+        packed_actions = PackedActions(self.config.data_manager, start_values={'uuid':uuid, 'dossier':dossier})
+        
+        # Common Actions
+        
+        saving_flight = SaveFlight(self.config.data_manager, geojson)
+
+        if saving_flight.precondition():
+            packed_actions.add_action(saving_flight)
+
+
+        if st_token is None:
+            return self.__fnc_st_request_trigger__(packed_actions, avis, uuid, dossier)
+        else:
+            return self.__fnc_st_prescription_trigger__(packed_actions, avis, uuid, dossier)
+
+    def __fnc_accept_trigger__(self, data, geojson, email, password, avis):
+        from pages.modules.managers import PackedActions, SaveFlight, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState
+        from demarches_simpy import DossierState
+        from pages.modules.config import CONFIG
+
+        uuid = data['uuid']
+        flight = self.config.data_manager.get_flight_by_uuid(uuid)
+        dossier = flight.get_attached_dossier()
+        skeleton = CONFIG("email-templates/dossier-accepted")
+        pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
+
+        self.process_connection(data, email, password)
+        if not self.config.security_manager.is_logged:
+            return [{"message" : "Invalid credentials", 'type':"error"}, False]
+
+        packed_actions = PackedActions(self.config.data_manager, start_values={})
+
+        # Common Actions
+        saving_flight = SaveFlight(self.config.data_manager, geojson)
+
+        new_flight = saving_flight.precondition()
+
+        delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
+        change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, DossierState.ACCEPTE)
+        build_pdf = BuildPdf(self.config.data_manager, dossier, geojson if new_flight else flight.get_geojson())
+        send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8'), avis, pdf_url=pdf_url)
+
+
+        if new_flight:
+            packed_actions.add_action(saving_flight)
+
+        packed_actions.add_action(delete_st_token)
+        packed_actions.add_action(change_dossier_state)
+        packed_actions.add_action(build_pdf)
+        packed_actions.add_action(send_instruct)
+
+        return [self.config.security_manager.perform_action(packed_actions),True]
+
+
+    def __fnc_submit_trigger__(self, data, geojson, email, password, avis):
+        if self.mode == self.ACCEPTER_ACTION:
+            return self.__fnc_accept_trigger__(data, geojson, email, password, avis)
+        elif self.mode == self.SUBMIT_ACTION:
+            return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis)
+
+
+    def __init__(self,pageConfig: PageConfig, map: Carte, incoming_data : IncomingData):
         self.incoming_data = incoming_data
         self.map = map
+        IBaseComponent.__init__(self, pageConfig)
+        html.Div.__init__(self, children=self.init_output(SavingMode.REQUEST_ST), id=self.get_prefix(), style=self.__get_root_style__())
+
         
         # self.trigger_dialog_button = html.Button("...", style=AdminPanel.BUTTON_STYLE)
         # self.submit = html.Button("...", style=AdminPanel.BUTTON_STYLE)
@@ -188,11 +317,11 @@ class AdminPanel(html.Div, IBaseComponent):
         
         # set_init_admin_panel_callback(self)
         incoming_data.set_callback(self.get_prefix(), self.__fnc_admin_panel_init__, "children")
-        
+
 
         # set_trigger_dialog_box(self)
         # set_admin_panel_callback(self, map.get_comp_edit())
-        self.set_submit_action()
+        # self.set_submit_action()
     # def init_dialog(self, title="Prescription ?"):
     #     return html.Div([
     #         html.H3(title),
@@ -240,7 +369,7 @@ class AdminPanel(html.Div, IBaseComponent):
                     return [{'message': f'Flight saved with uuid {out["uuid"]}'} , no_update]
             else:
                 return [no_update, no_update]
-        callback_builder.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_trigger_id()], __set__, ['data', 'hidden'], prevent_initial_call=True)
+        callback_builder.set_callback([APP_INFO_BOX.get_output(), Output(LOADING_BOX.get_trigger_id(),'hidden',allow_duplicate=True)], __set__, ['data', 'hidden'], prevent_initial_call=True)
 
         from pages.modules.data import Background_Task
 
@@ -272,12 +401,20 @@ class AdminPanel(html.Div, IBaseComponent):
         disabled_submit = True
         disabled_login = True
         
+
+
         if data != None:
+            flight = self.config.data_manager.get_flight_by_uuid(data['uuid'])
+            dossier = flight.get_attached_dossier() 
             disabled_login = (mode == SavingMode.ST_AVIS) or IS_FILE_CLOSED(data['uuid'])
-            disabled_submit = (IS_ST_ALREADY_REQUESTED(data['uuid']) and mode == SavingMode.REQUEST_ST) or  IS_FILE_CLOSED(data['uuid'])
+            disabled_submit = (self.config.data_manager.is_st_token_already_exists(dossier) and mode == SavingMode.REQUEST_ST) or  IS_FILE_CLOSED(data['uuid'])
             disabled_block = IS_FILE_CLOSED(data['uuid']) or mode == SavingMode.ST_AVIS
         self.mode = mode
-        return html.Div([
+
+        self.submit_button = TriggerCallbackButton(self.set_id(self.B_SUBMIT), children = "Envoyer", style=AdminPanel.BUTTON_STYLE)
+
+
+        layout = html.Div([
             dbc.Form([
                 html.Div([
                     dcc.Input(type="email", placeholder="Instructeur Email", style=AdminPanel.FIELD_STYLE, disabled=disabled_login, id=self.set_id(AdminPanel.F_EMAIL)),
@@ -290,10 +427,24 @@ class AdminPanel(html.Div, IBaseComponent):
             html.Dialog([
                 html.H3("Prescription ? :" if mode == SavingMode.ST_AVIS else "Commentaire ? :"),
                 dcc.Input(type="text", placeholder="", style=AdminPanel.FIELD_STYLE, id=self.set_id(AdminPanel.F_AVIS)),
-                html.Button("Envoyer", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_SUBMIT)),
+                self.submit_button,
                 html.Button("Annuler", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_CANCEL))
             ], style={"zIndex":"900"},id=self.set_id(AdminPanel.DIALOG_BOX),open=False)
         ])
+
+        self.submit_button.add_state(self.incoming_data.get_prefix() , "data")
+        self.submit_button.add_state(self.map.get_id(Carte.EDIT_CONTROL), "geojson")
+        self.submit_button.add_state(self.get_id(self.F_EMAIL), "value")
+        self.submit_button.add_state(self.get_id(self.F_PASSWORD), "value")
+        self.submit_button.add_state(self.get_id(self.F_AVIS), "value")
+        self.submit_button.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()] , self.__fnc_submit_trigger__, ['data','hidden'], prevent_initial_call=True)
+
+
+        return layout
+
+
+
+
 
     def set_internal_callback(self):
         from dash import callback, no_update
@@ -310,13 +461,13 @@ class AdminPanel(html.Div, IBaseComponent):
             #TODO: refacto STATE COMPONENT
             print(ctx.triggered_id)
             if args[0] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_TRIGGER_DIALOG):
-
+                self.mode = AdminPanel.SUBMIT_ACTION
                 return True
             elif args[2] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_ACCEPTER):
-                self.mode = SavingMode.BLOCK_ACCEPTED
+                self.mode = AdminPanel.ACCEPTER_ACTION
                 return True
             elif args[3] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_REFUSER):
-                self.mode = SavingMode.BLOCK_REFUSED
+                self.mode = AdminPanel.REFUSER_ACTION
                 return True
             elif args[1] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_CANCEL):
                 return False
@@ -325,8 +476,8 @@ class AdminPanel(html.Div, IBaseComponent):
             else:
                 return False
 
-    def set_mode(self, mode: SavingMode):
-        self.mode = mode
+    # def set_mode(self, mode: SavingMode):
+    #     self.mode = mode
     
     # def get_login_field(self):
     #     return self.get_id(AdminPanel.LOGIN_FIELD)

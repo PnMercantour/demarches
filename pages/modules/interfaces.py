@@ -1,9 +1,17 @@
-from pages.modules.config import PageConfig
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pages.modules.config import PageConfig
+
+
 class IBaseComponent():
     def __init__(self, pageConfig: PageConfig):
         component_prefix = str(type(self)).split(".")[-1].replace("'>","")
         self.prefix = pageConfig.page_name+"_"+component_prefix
         self.ids = []
+        self.__pageConfig = pageConfig
 
     def set_id(self, id: str):
         full_id = self.prefix+"_"+id
@@ -28,6 +36,14 @@ class IBaseComponent():
 
     def __get_root_style__(self):
         return {'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px', 'minWidth': '300px', 'margin': '10px', 'minWidth': '300px' }
+
+    @property
+    def config(self) -> PageConfig:
+        return self.__pageConfig
+
+    @config.setter
+    def config(self, pageConfig: PageConfig) -> None:
+        self.__pageConfig = pageConfig
 
 
     def set_internal_callback(self) -> None:

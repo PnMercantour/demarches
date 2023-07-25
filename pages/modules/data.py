@@ -8,19 +8,18 @@ from enum import Enum
 
 from demarches_simpy import Profile, Dossier, DossierState, MessageSender, StateModifier, AnnotationModifier
 from demarches_simpy.utils import DemarchesSimpyException
-from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, CONFIG, SEND_EMAIL, SEND_EMAIL_WITH_FILE
+from pages.modules.config import CONN,NS_RENDER,INFO, SavingMode, config_env, SEND_EMAIL, SEND_EMAIL_WITH_FILE
 
 from print_my_report import CartoPrinter, DisplayObj
 
 from threading import Thread
-class SecurityLevel(Enum):
-    AUTH=0 # Action requires authentication
-    NO_AUTH=1 # Action does not require authentication
 
 class SQL_Fetcher():
     def __init__(self):
         self.CONN = CONN()
 
+    def is_sql_error(self, resp):
+        return isinstance(resp, dict) and "type" in resp and resp["type"] == "error"
 
     def fetch_sql(self, sql_file: str = None, sql_request: str = None, request_args=None) -> list[dict]:
             
@@ -28,11 +27,16 @@ class SQL_Fetcher():
             raise Exception("sql_file or sql_request must be defined")
         try:
             request = sql_request if sql_request != None else open(sql_file, 'r').read()
-            print('SQL REQUEST : ', request)
+            print('SQL REQUESTED ')
             with self.CONN.cursor() as cursor:
                 cursor.execute(request, request_args)
+                
+                if 'INSERT' in request:
+                    self.CONN.commit()
+                
                 return cursor.fetchall()
-        except psycopg.errors as e:
+
+        except psycopg.Error as e:
             return {"message": f"SQL ERROR {str(e)}", "type":"error"}
 
 class Flight(SQL_Fetcher):
@@ -47,7 +51,7 @@ class Flight(SQL_Fetcher):
         }
 
 
-    def __init__(self, manager, id: str, dossier_id: str, creation_date: str):
+    def __init__(self, manager , id: str, dossier_id: str, creation_date: str):
         super().__init__()
         self.id = id
         self.manager = manager
@@ -85,7 +89,7 @@ class Flight(SQL_Fetcher):
         return f"Flight({self.id},{self.dossier_id},{self.creation_date})"
 
 conn = CONN()
-profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(CONFIG('verbose')) , warning = True)
+profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(config_env('verbose')) , warning = True)
 
 def reinit_transaction():
     cur = conn.cursor()
@@ -238,7 +242,7 @@ def __update_file_state__(dossier_number, data):
     try:
         dossier = __get_file_by_number__(dossier_number)
         ## Force fetching to be sure to have the last state
-        data['state'] = dossier.force_fetch().get_dossier_state()
+        data['state'] = str(dossier.force_fetch().get_dossier_state())
     except DemarchesSimpyException as e:
         data['state'] = 'none'
         return {"error":e.message}
@@ -278,7 +282,7 @@ def __delete_st_token__(dossier_id):
 
 def __check_file_state__(dossier_number, savingMode: SavingMode):
     dossier = __get_file_by_number__(dossier_number)
-    state = dossier.force_fetch().get_dossier_state()
+    state = str(dossier.force_fetch().get_dossier_state())
     if state != 'en_construction' and savingMode == SavingMode.UPDATE:
         return False
     if state != 'en_instruction' and (savingMode == SavingMode.REQUEST_ST or savingMode == SavingMode.ST_AVIS):

@@ -1,13 +1,13 @@
 from dash.dependencies import Input, Output, State
 from collections.abc import Callable
-from pages.modules.managers.security_manager import ISecurityManager
-from pages.modules.managers.action_manager import IAction
 from dash import callback
 
 
 class CustomCallback():
-    def __init__(self):
+    def __init__(self, allow_duplicate=False):
         self.states = []
+        self.is_callback_set = False
+        self.allow_duplicate = allow_duplicate
     def __process_properties__(self, output_ids, output_properties) -> list:
         if not isinstance(output_ids, list):
             return [output_properties]
@@ -22,7 +22,10 @@ class CustomCallback():
     def __process_output__(self, output_ids, output_properties: list) -> list:
         #if output_ids is not list:
         if not isinstance(output_ids, list):
-            return Output(output_ids, output_properties[0])
+            #check if output_id is not an Output
+            if not isinstance(output_ids, Output):
+                return Output(output_ids, output_properties[0])
+            return output_ids
         else:
             outputs = []
             for output_id, output_property in zip(output_ids, output_properties):
@@ -33,6 +36,7 @@ class CustomCallback():
                     outputs.append(output_id)
             return outputs
     def set_callback(self, output_ids: list, fnc: Callable[[], list],output_properties="children",prevent_initial_call=False) -> list[Output]:
+        self.is_callback_set = True if not self.allow_duplicate else False
         output_properties = self.__process_properties__(output_ids, output_properties)
         return self.__process_output__(output_ids, output_properties)
 

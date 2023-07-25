@@ -1,0 +1,7 @@
+Le dossier n°{dossier_number} a été validé.
+
+    Vous trouverez ci-joint le plan de vol, ainsi que l'attestation téléchargeable.
+    
+    Attestation : {url}
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
