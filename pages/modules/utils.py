@@ -1,10 +1,10 @@
 import os
+import psycopg
+from psycopg import connect
+
 import smtplib,ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-
 class EmailSender():
     def __init__(self, email:str = None, password:str = None):
         self.sender_email = os.getenv('SENDER_EMAIL', email)
@@ -37,3 +37,33 @@ def PolylineToMultistring(features):
     src = {"type":"MultiLineString","coordinates":[]}
     src['coordinates'] = list(map(lambda x: x['geometry']['coordinates'],features))
     return src
+
+
+class SQL_Fetcher():
+   
+    def __init__(self):
+        from carto_editor import CONN
+        self.CONN = CONN
+
+    def is_sql_error(self, resp):
+        return isinstance(resp, dict) and "type" in resp and resp["type"] == "error"
+
+    def fetch_sql(self, sql_file: str = None, sql_request: str = None, request_args=None, commit=False) -> list[dict]:
+            
+        if sql_file == None and sql_request == None:
+            raise Exception("sql_file or sql_request must be defined")
+        try:
+            request = sql_request if sql_request != None else open(sql_file, 'r').read()
+            with self.CONN.cursor() as cursor:
+                cursor.execute(request, request_args)
+                
+                if commit:
+                    self.CONN.commit()
+
+                print('SQL REQUESTED ')
+                return cursor.fetchall()
+
+
+        except psycopg.Error as e:
+            self.CONN.rollback()
+            return {"message": f"SQL ERROR {str(e)}", "type":"error"}

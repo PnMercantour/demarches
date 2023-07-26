@@ -1,13 +1,11 @@
 import dash
-from dash import html, callback
-from dash.dependencies import Output, Input
+from dash import html
 import dash_leaflet as dl
 
-from pages.modules.data import DROP_ZONE_GEOJSON, URL_DATA_COMP, INFO_BOX_COMP, LIMITES_GEOJSON,FLIGHT,Flight
-from pages.modules.config import NS_RENDER, SavingMode,INFO, PageConfig
-from pages.modules.components import Carte, FileInfo, FlightSaver,AdminPanel
-from pages.modules.components_temp.data_components import IncomingData
-from pages.modules.components_temp.global_components import APP_INFO_BOX, CACHE
+from pages.modules.data import BuiltInCallbackFnc
+from pages.modules.config import NS_RENDER, PageConfig
+from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel
+from pages.modules.data import APP_INFO_BOX, CACHE
 from pages.modules.managers import DataManager, AdminSecurity, STSecurity
 
 dash.register_page(__name__, path='/admin',path_template='/admin/<uuid>')
@@ -37,24 +35,20 @@ drop_zone = dl.GeoJSON(data=drop_zone_data,id=map.set_id("comp_drop_zone"),optio
 limites =  dl.GeoJSON(data=limites_data,id=map.set_id("comp_limites"),options=dict(style=NS_RENDER('get_limits_style')))
 
 ## ADD FEATURES TO MAP
-map.addChildren(drop_zone).addChildren(limites)
+map = map.addChildren(drop_zone).addChildren(limites)
 
 
 
-map = map.addGeoJson(None,id="flight", option=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
+map.addGeoJson(None,id="flight", option=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
 
 
-##  flight
-def edit_flight_callback(data):
-   flight = data_manager.get_flight_by_uuid(data['uuid']).get_last_flight()
-   if flight == None:
-      return [None, APP_INFO_BOX.build_message("Flight not found", 'error')]
-   return [Flight.build_complete_geojson(flight), APP_INFO_BOX.build_message("Flight found")]
-
-url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output()] , edit_flight_callback, 'data', prevent_initial_call=True)
+callbacks = BuiltInCallbackFnc(data_manager)
 
 
-file_info = FileInfo(config, incoming_data=url_data)
+url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output()] , callbacks.flight_fetch, 'data', prevent_initial_call=True)
+
+
+file_info = DossierInfo(config, incoming_data=url_data)
 admin_panel = AdminPanel(config, map, url_data)
 
 def layout(uuid=None,security_token=None,st_token=None,**kwargs):
@@ -66,4 +60,4 @@ def layout(uuid=None,security_token=None,st_token=None,**kwargs):
       if st_token != None:
             config.security_manager = st_security_manager
       url_data.set_data(data)
-      return html.Div([url_data, URL_DATA_COMP(uuid=uuid,security_token=security_token, st_token=st_token), admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height': '100vh'})])
+      return html.Div([url_data, admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height':"60vh"})],style={'height':'80vh'})

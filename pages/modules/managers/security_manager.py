@@ -8,44 +8,12 @@ if TYPE_CHECKING:
     from pages.modules.managers.data_manager import DataManager
     from pages.modules.managers.action_manager import IAction
 
-from pages.modules.config import SecurityLevel
-from pages.modules.data import SQL_Fetcher
-class ISecurityManager():
-    
+from pages.modules.config import SecurityLevel, CONFIG
+from pages.modules.utils import SQL_Fetcher
+from demarches_simpy import Dossier, DossierState
 
-    def __init__(self, data : DataManager) -> None:
-        self.data_manager = data
-        self.logged = False
+from pages.modules.interfaces import ISecurityManager
 
-
-    def perform_action(self, action : IAction) -> any:
-        if action.get_security_level() == SecurityLevel.AUTH and not self.logged:
-            return {"message":"You are not logged in", "type":"error"}
-
-        if not action.precondition():
-            return action.result if action.is_error else {"message":"Precondition failed", "type":"error"}
-        
-        action.perform()
-        return self.action_result(action)
-
-    def action_result(self, action : IAction) -> any:
-        if action.get_security_level() == SecurityLevel.AUTH and not self.logged:
-            return False
-        return action.result
-
-    def login(self, data : dict[str,str]) -> bool:
-        '''
-        dict must contain the following keys:
-        - uuid
-
-        '''
-        pass
-
-    def is_logged(self) -> bool:
-        return self.logged
-
-    def get_data_ctx(self) -> DataManager:
-        return self.data_manager
 
 class AdminSecurity(ISecurityManager):
 
@@ -77,22 +45,60 @@ class STSecurity(ISecurityManager, SQL_Fetcher):
 
         uuid = data['uuid']
         st_token = data['st_token']
-        dossier = self.data_manager.get_flight_by_uuid(uuid).get_attached_dossier()
+        dossier = self.get_data_ctx().get_flight_by_uuid(uuid).get_attached_dossier()
         
+        if self.get_data_ctx().is_file_closed(dossier):
+            return False
+
         resp = self.fetch_sql(sql_file='./sql/check_st_token.sql', request_args=[dossier.get_id(), st_token])
 
-        if self.is_sql_error(resp):
+        if self.is_sql_error(resp) or len(resp) == 0:
             print(resp['message'])
             return False
+        
 
-        if len(resp) == 0:
-            print("No token found")
-            return False
         
         self.logged = resp[0][0]
         return self.logged
 
+class UserSecurity(ISecurityManager):
+    
+    def login(self, data):
+        if not 'uuid' in data and not 'security_token' in data:
+            return False
 
+        uuid = data['uuid']
+        security_token = data['security_token']
+        flight = self.data_manager.get_flight_by_uuid(uuid)
+        if flight is None:
+            return False
+
+        dossier = flight.get_attached_dossier()
+        
+        if self.get_data_ctx().is_file_closed(dossier):
+            return False
+
+        if dossier.get_dossier_state() != DossierState.CONSTRUCTION:
+            return False
+
+
+
+
+        field_label = CONFIG('ds_label_field/security-token', 'security-token')
+
+        annotations = dossier.get_annotations()
+
+        if not field_label in annotations:
+            return False
+
+        token_field = annotations[field_label]
+
+        self.logged = token_field["stringValue"] != security_token
+        return self.logged
+
+
+               
+        
 
 
 

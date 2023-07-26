@@ -14,9 +14,10 @@
         }
     },
     "ds_label_field":{
-        "st-prescription": "st-prescription"
+        "st-prescription": "st-prescription",
+        "security-token" : "security-token"
     },
     "url-template":{
-        "pdf-path" : "http://localhost:8050/pdf/{dossier_id}"
+        "pdf-path" : "http://localhost:8050/pdf/flight_{dossier_id}.pdf"
     }
 }

@@ -1,41 +1,11 @@
-from pages.modules.config import PageConfig
+from dash import callback, html, dcc
+from dash.dependencies import Input, Output, State
+from carto_editor import PageConfig
 
-from dash import html, dcc
-from pages.modules.interfaces import IBaseComponent
-from pages.modules.callback_system import CustomCallback
-from pages.modules.data_cache import DataCache
-from dash import callback
-from typing import Callable
-from dash.dependencies import  Input, Output
+from pages.modules.interfaces import *
+from pages.modules.callbacks import CustomCallback
 
 
-
-class LoadingBox(dcc.Loading, IBaseComponent, CustomCallback):
-    # Style
-
-    # Id
-    TRIGGER_LOADING = "trigger_loading"
-
-    def __get_layout__(self):
-        return html.Div(id=self.set_id(LoadingBox.TRIGGER_LOADING), hidden=True)
-
-    def __get_root_style__(self):
-        return {"zIndex":"1000", "position":"absolute", "bottom":"0px", "right":"0px", "width":"100%", "height":"100%"}
-
-    def set_internal_callback(self) -> None:
-       pass
-
-
-    def __init__(self, pageConfig: PageConfig):
-        self.pageConfig = pageConfig
-        IBaseComponent.__init__(self, pageConfig)
-        dcc.Loading.__init__(self, id=self.get_prefix(), children=self.__get_layout__(), style=self.__get_root_style__(), type='circle')
-
-    def get_trigger_id(self):
-        return self.get_id(LoadingBox.TRIGGER_LOADING)
-
-    def get_output(self):
-        return Output(self.get_trigger_id(), 'hidden', allow_duplicate=True)
 
 class InfoBox(html.Div, IBaseComponent, CustomCallback):
     # Style
@@ -123,9 +93,3 @@ class InfoBox(html.Div, IBaseComponent, CustomCallback):
         return Output(self.get_id(InfoBox.DATA), 'data', allow_duplicate=True)
     def get_data_id(self):
         return self.get_id(InfoBox.DATA)
-
-GLOBAL_CONFIG = PageConfig("global")
-
-APP_INFO_BOX = InfoBox(GLOBAL_CONFIG)
-LOADING_BOX = LoadingBox(GLOBAL_CONFIG)
-CACHE = DataCache()

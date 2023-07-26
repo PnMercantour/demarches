@@ -4,82 +4,14 @@ if TYPE_CHECKING:
     from pages.modules.managers.data_manager import DataManager
 
 
-from pages.modules.data import SQL_Fetcher
+
 from pages.modules.config import SecurityLevel
-from pages.modules.utils import PolylineToMultistring
+from pages.modules.utils import PolylineToMultistring, SQL_Fetcher
 from demarches_simpy import Dossier, DossierState, AnnotationModifier, StateModifier
 from uuid import uuid4
 import json
-class IAction():
 
-    AUTH=0 # Action requires authentication
-    NO_AUTH=1 # Action does not require authentication
-    def __init__(self, data_manager: DataManager, security_lvl : SecurityLevel = SecurityLevel.AUTH) -> None:
-        self.data_manager = data_manager
-        self.security_lvl = security_lvl
-        self.__result = None
-        self.__is_error = False
-
-    def get_security_level(self) -> SecurityLevel:
-        return self.security_lvl
-
-    def precondition(self) -> bool:
-        return True
-    def perform(self) -> any:
-        pass
-
-    def trigger_error(self, str):
-        self.is_error = True
-        self.result = {"message" : str, "type" : "error"}
-        return self
-
-    def trigger_success(self, str):
-        self.is_error = False
-        self.result = {"message" : str, "type" : "success"}
-        return self
-    @property
-    def is_error(self) -> bool:
-        return self.__is_error
-    @is_error.setter
-    def is_error(self, value : bool) -> None:
-        self.__is_error = value
-
-    @property
-    def result(self) -> any:
-        return self.__result
-
-    @result.setter
-    def result(self, value : any) -> None:
-        self.__result = value
-
-class IPackedAction(IAction):
-    def __init__(self, data_manager: DataManager, security_lvl : SecurityLevel = SecurityLevel.AUTH) -> None:
-        IAction.__init__(self, data_manager, security_lvl=security_lvl)
-        self.__passed_kwargs = {}
-    @property
-    def passed_kwargs(self) -> dict:
-        return self.__passed_kwargs
-
-    @passed_kwargs.setter
-    def passed_kwargs(self, value : dict) -> None:
-        self.__passed_kwargs = value
-
-    def trigger_success(self, str, **kwargs):
-        self.passed_kwargs = kwargs if self.passed_kwargs == {} else self.passed_kwargs
-        return super().trigger_success(str)
-
-    def check_correct_passed_kwargs(self, names : list, kwargs : dict) -> bool:
-        for name in names:
-            if name not in kwargs:
-                self.is_error = True
-                self.result = {"message":"Missing argument {}".format(name), "type":"error"}
-                return False
-        return True
-
-
-
-    def perform(self, **kwargs) -> any:
-        pass
+from pages.modules.interfaces import IAction, IPackedAction
 
 class PackedActions(IAction):
     def __init__(self, data_manager: DataManager, start_values : dict[str, any],  security_lvl : SecurityLevel = SecurityLevel.AUTH) -> None:
@@ -159,7 +91,7 @@ class GenerateSTToken(IPackedAction, SQL_Fetcher):
         dossier = flight.get_attached_dossier()
 
         st_token = str(uuid4())
-        resp = self.fetch_sql(sql_request="INSERT INTO survol.st_token (token, dossier_id) VALUES (%s, %s) RETURNING token; ", request_args=[st_token, dossier.get_id() ])
+        resp = self.fetch_sql(sql_request="INSERT INTO survol.st_token (token, dossier_id) VALUES (%s, %s) RETURNING token; ", request_args=[st_token, dossier.get_id() ], commit=True)
     
         if self.is_sql_error(resp):
             self.is_error = True
@@ -206,10 +138,12 @@ class SendSTRequest(IPackedAction):
         return self
 
 class SaveFlight(IPackedAction, SQL_Fetcher):
-    def __init__(self, data_manager: DataManager, geojson : dict) -> None:
+    def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None) -> None:
+        '''Attached dossier optional, if not provided, the flight will be created without any attached dossier, doing this at the creation'''
         SQL_Fetcher.__init__(self)
         IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
         self.geojson = geojson
+        self.dossier = attached_dossier
 
     def precondition(self) -> bool:
         if self.geojson == None:
@@ -226,10 +160,11 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
 
     def perform(self, **kwargs) -> any:
         dossier = kwargs['dossier'] if 'dossier' in kwargs else None
+        dossier = self.dossier if dossier is None else dossier
         dossier_id = dossier.get_id() if dossier is not None else None
         geom = PolylineToMultistring(self.geojson['features'])
         geom = json.dumps(geom)
-        resp = self.fetch_sql(sql_request="INSERT INTO survol.carte (geom, dossier_id) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s) RETURNING uuid::text", request_args=[geom, dossier_id])
+        resp = self.fetch_sql(sql_request="INSERT INTO survol.carte (geom, dossier_id) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s) RETURNING uuid::text", request_args=[geom, dossier_id], commit=True)
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
             return self
@@ -242,11 +177,12 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         return self
 
 class SendInstruct(IPackedAction):
-    def __init__(self, data_manager: DataManager, header : str, message : str, prescription : str, **other_field) -> None:
+    def __init__(self, data_manager: DataManager, header : str, message : str, remarque : str, **other_field) -> None:
+        '''Other field can be callable : (lambda x: x) with x the dossier. The name of each variable can be used as variable in mail'''
         super().__init__(data_manager, security_lvl=SecurityLevel.AUTH)
         self.header = header
         self.message = message
-        self.prescription = prescription
+        self.remarque = remarque
         self.other_field = other_field
 
     def perform(self, **kwargs) -> any:
@@ -261,8 +197,14 @@ class SendInstruct(IPackedAction):
         dossier = flight.get_attached_dossier()
         url = f"http://localhost:8050/admin/{uuid}"
         pdf_path = kwargs['pdf_path'] if 'pdf_path' in kwargs else ""
+
+        #treating other field
+        for key in self.other_field:
+            if callable(self.other_field[key]):
+                self.other_field[key] = self.other_field[key](dossier)
+
         self.header = self.header.format(dossier_number=dossier.get_number(), flight_uuid=uuid)
-        self.message = self.message.format(url=url,dossier_url=dossier.get_pdf_url(), dossier_number=dossier.get_number(), dossier_id=dossier.get_id(), pdf_path=pdf_path, flight_uuid=uuid, prescription=self.prescription, **self.other_field)
+        self.message = self.message.format(url=url,dossier_url=dossier.get_pdf_url(), dossier_number=dossier.get_number(), dossier_id=dossier.get_id(), pdf_path=pdf_path, flight_uuid=uuid, prescription=self.remarque, remarque=self.remarque, **self.other_field)
 
         email_sender = EmailSender()
         resp = email_sender.send(dossier.get_attached_instructeurs_info()[0]['email'],self.header, self.message)
@@ -289,7 +231,7 @@ class SetAnnotation(IPackedAction):
             self.trigger_error("No instructeur attached to this dossier")
             return False
         
-        if self.dossier.get_dossier_state() != DossierState.INSTRUCTION:
+        if self.data_manager.is_file_closed(self.dossier):
             self.trigger_error("Wrong dossier status")
             return False
 
@@ -341,7 +283,7 @@ class DeleteSTToken(IPackedAction, SQL_Fetcher):
     def perform(self, **kwargs) -> any:
         dossier_id = self.dossier.get_id()
 
-        resp = self.fetch_sql(sql_request="DELETE FROM survol.st_token WHERE dossier_id = %s", request_args=[dossier_id])
+        resp = self.fetch_sql(sql_request="DELETE FROM survol.st_token WHERE dossier_id = %s RETURNING token", request_args=[dossier_id], commit=True)
 
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
@@ -358,6 +300,10 @@ class ChangeDossierState(IPackedAction):
         self.new_state = new_state
 
     def precondition(self) -> bool:
+        if len(self.dossier.get_attached_instructeurs_info()) == 0:
+            self.trigger_error("No instructeur attached to this dossier")
+            return False
+        
         if self.dossier.get_dossier_state() != DossierState.INSTRUCTION:
             self.trigger_error("Dossier not in instruction")
             return False
@@ -366,7 +312,9 @@ class ChangeDossierState(IPackedAction):
 
 
     def perform(self, **kwargs) -> any:
-        modifier = StateModifier(self.data_manager.profile, self.dossier)
+
+        instructeur_id = self.dossier.get_attached_instructeurs_info()[0]['id']
+        modifier = StateModifier(self.data_manager.profile, self.dossier, instructeur_id=instructeur_id)
         if modifier.perform(self.new_state) != StateModifier.SUCCESS:
             self.trigger_error('Error during state modification')
             return self
@@ -387,6 +335,16 @@ class BuildPdf(IPackedAction):
         if self.geojson == None:
             self.trigger_error("No geojson")
             return False
+
+        if self.geojson['type'] != 'FeatureCollection':
+            self.trigger_error("Wrong geojson type")
+            return False
+        
+        if 'features' in self.geojson and len(self.geojson['features']) == 0:
+            self.trigger_error("Empty geojson")
+            return False
+
+        
         
         return True
 
@@ -398,7 +356,7 @@ class BuildPdf(IPackedAction):
         info1 = DisplayObj('Dossier Info', str(dossier))
 
         printer = CartoPrinter(geojson, title, [info1],logo=Image.open("./assets/logo.png"))
-        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_number()}.pdf", output_dir="./pdf")
+        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf")
 
 
     def perform(self, **kwargs) -> any:
@@ -411,6 +369,7 @@ class BuildPdf(IPackedAction):
         self.passed_kwargs  = {
             "pdf_path":file_path,
         }
+        self.passed_kwargs.update(kwargs)
         return self.trigger_success("PDF building")
 
 

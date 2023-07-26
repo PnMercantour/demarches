@@ -1,1 +1,0 @@
-UPDATE survol.dossier SET last_carte = %s WHERE dossier_id = %s;
