@@ -7,7 +7,7 @@ window.carto = Object.assign({}, window.carto, {
     rendering: {  
         draw_drop_zone: function (feature, latlng)
         {
-            const flag = L.icon({iconUrl: `https://img.icons8.com/ios/50/circled-h.png`, iconSize: [50, 50]});
+            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/50/region-code.png`, iconSize: [50, 50]});
             return L.marker(latlng, {icon: flag});
         },
         draw_arrow: function(feature, layer, context){
@@ -89,15 +89,18 @@ window.carto = Object.assign({}, window.carto, {
                   ]
             }).addTo(map);
         },
-        get_limits_style(feature, context){
-
-            return {
-                color: '#167d14',
-                fillOpacity: 0.2,
-                weight: 3,
-                opacity: 0.8
-            }
+        filter_by_month: function(feature, context){
+            const {minMonth , maxMonth} = context.props.hideout;
+            month = feature.properties.mois
+            //convert month to int
+            month = parseInt(month);
+            
+            is_inside = month >= minMonth && month <= maxMonth;
+            
+            
+            return is_inside;
         }
+
     },
 
 });

@@ -40,6 +40,7 @@ def PolylineToMultistring(features):
 def GetAttestationApercuURL(demarche_number : int , dossier_number : int) -> str:
     return f"https://www.demarches-simplifiees.fr/procedures/{str(demarche_number)}/dossiers/{str(dossier_number)}/apercu_attestation"
 
+
 class SQL_Fetcher():
    
     def __init__(self):

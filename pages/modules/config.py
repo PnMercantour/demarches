@@ -13,6 +13,7 @@ from dotenv import dotenv_values
 from dash_extensions.javascript import Namespace
 
 import dotenv
+import os
 
 from enum import Enum
 
@@ -52,15 +53,6 @@ class PageConfig():
 
 
 
-def config_env(key):
-    value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
-    if value == "True":
-        return True
-    elif value == "False":
-        return False
-    else:
-        return value
-
 import json
 config_file = json.loads(open('./config.json','r',encoding='utf-8').read())
 
@@ -79,6 +71,20 @@ def CONFIG(path,default : str ="")->str:
 
     return value
 
+## GLOBAL STYLE CONFIGURATION
+
+FEATURE_LIMITES_STYLE = {
+    "color": '#F27438',
+    "fillOpacity": 0.2,
+    "weight": 3,
+    "opacity": 0.8
+}
+FEATURE_ZONE_SENSIBLE_STYLE = {
+    "color": '#FF5555',
+    "fillOpacity": 0.4,
+    "weight": 3,
+    "opacity": 0.8
+}
 
 
 NS_RENDER = Namespace("carto","rendering")
@@ -115,29 +121,7 @@ STATE_PROPS = {
 
 
 ## MAP CONFIGURATION
-EDIT_CONTROL_EDIT_DRAW = {
-                'polyline':{'shapeOptions':{
-                        'color':'#ff7777',
-                        'weight':6,
-                        'opacity':1
-                    },
-                },
-                'polygon':False,
-                'rectangle':False,
-                'circle':False,
-                'marker':False,
-                'circlemarker':False
-            }
-EDIT_CONTROL_NO_EDIT_DRAW = {
-                'polyline':False,
-                'polygon':False,
-                'rectangle':False,
-                'circle':False,
-                'marker':False,
-                'circlemarker':False
-}
 
-EDIT_CONTROL = lambda : dl.EditControl(draw=EDIT_CONTROL_EDIT_DRAW)
 
 
 
@@ -150,14 +134,11 @@ tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
                 "&TILEMATRIX={z}" +
                 "&TILEROW={y}" +
                 "&TILECOL={x}")
-tile_url = tile_url.replace("CLEF",config_env("IGN_KEY"))
+tile_url = tile_url.replace("CLEF",os.getenv("IGN_KEY"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 
 TILE = dl.TileLayer(url=tile_url,tileSize=tile_size,attribution=attribution)
-MAP_STYLE = {'width': '100%', 'height': '100vh', 'margin': "auto", "display": "block"}
-CENTER = [44.13211482938621, 7.093281566795227]
-ZOOM = 9
 
 
 

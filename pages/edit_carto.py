@@ -3,7 +3,7 @@ from dash import html
 import dash_leaflet as dl
 from pages.modules.config import NS_RENDER, PageConfig
 from pages.modules.base_components import IncomingData, Carte, DossierInfo, FlightSaver
-from pages.modules.data import APP_INFO_BOX, CACHE, BuiltInCallbackFnc
+from pages.modules.data import APP_INFO_BOX, BuiltInCallbackFnc
 from pages.modules.managers import DataManager, UserSecurity
 dash.register_page(__name__, path='/edit',path_template='/edit/<uuid>')
 
@@ -16,17 +16,9 @@ url_data = IncomingData(config)
 map = Carte(config, incoming_data=url_data)
 
 ## FETCHING FEATURES
-limites_data = CACHE.get_feature('limites', security_manager) 
-drop_zone_data = CACHE.get_feature('drop_zone', security_manager)
+Carte.SetAllFeatures(map)
 
-drop_zone = dl.GeoJSON(data=drop_zone_data,id=map.set_id("comp_drop_zone"),options=dict(pointToLayer=NS_RENDER('draw_drop_zone')),cluster=True, superClusterOptions=dict(radius=200))
-limites =  dl.GeoJSON(data=limites_data,id=map.set_id("comp_limites"),options=dict(style=NS_RENDER('get_limits_style')))
-
-## ADD FEATURES TO MAP
-map.addChildren(drop_zone).addChildren(limites)
-
-
-map = map.addGeoJson(None,id="flight", option=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
+map = map.addGeoJson(None,id="flight", options=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
 
 
 

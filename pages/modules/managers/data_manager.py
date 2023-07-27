@@ -1,7 +1,5 @@
-from pages.modules.config import config_env
 from demarches_simpy import Dossier, DossierState, Profile
-
-
+import os
 from pages.modules.utils import SQL_Fetcher
 from pages.modules.interfaces import ISecurityManager
 
@@ -84,7 +82,7 @@ class DataManager(SQL_Fetcher):
 
         self.dossier_linked_to_last_flight : dict[Dossier, Flight] = {}
 
-        self.profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(config_env('verbose')) , warning = True)
+        self.profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(os.getenv('verbose')) , warning = True)
 
     def __fetch_flight__(self, uuid: str):
         resp = self.fetch_sql(sql_request="SELECT uuid::text, dossier_id, creation_date::text FROM survol.carte WHERE uuid = %s", request_args=[uuid])
