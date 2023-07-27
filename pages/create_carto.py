@@ -2,18 +2,18 @@ import dash
 from dash import html
 import dash_leaflet as dl
 
-from carto_editor import NS_RENDER, PageConfig, BuiltInCallbackFnc
+from pages.modules.config import NS_RENDER, PageConfig
 from pages.modules.base_components import IncomingData, Carte, FlightSaver
 from pages.modules.data import APP_INFO_BOX, CACHE
 from pages.modules.managers import DataManager, UserSecurity
 
-dash.register_page(__name__, path='/view',path_template='/')
+dash.register_page(__name__, path='/',path_template='/')
 
 ## MANAGERS
 data_manager = DataManager()
 security_manager = UserSecurity(data_manager)
 
-config = PageConfig("view", data_manager, security_manager)
+config = PageConfig("create", data_manager, security_manager)
 
 url_data = IncomingData(config)
 
@@ -27,18 +27,19 @@ drop_zone_data = CACHE.get_feature('drop_zone', security_manager)
 drop_zone = dl.GeoJSON(data=drop_zone_data,id=map.set_id("comp_drop_zone"),options=dict(pointToLayer=NS_RENDER('draw_drop_zone')),cluster=True, superClusterOptions=dict(radius=200))
 limites =  dl.GeoJSON(data=limites_data,id=map.set_id("comp_limites"),options=dict(style=NS_RENDER('get_limits_style')))
 map = map.addChildren(drop_zone).addChildren(limites)
-map.addGeoJson(None,id="flight", option=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
+
+
+flight_saver = FlightSaver(config, FlightSaver.SAVE_CREATE,map, url_data)
 
 
 
-callbacks = BuiltInCallbackFnc(data_manager)
-url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output()], callbacks.flight_fetch, 'data',prevent_initial_call=True)
 
 
 
-def layout(uuid:str = None):
+
+def layout():
     data = {
-        'uuid':uuid,
+        'uuid':None,
     }
     url_data.set_data(data)
-    return html.Div([url_data, map], style={'height': '80vh'})
+    return html.Div([url_data, flight_saver, map], style={'height': '80vh'})

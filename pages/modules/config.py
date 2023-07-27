@@ -1,15 +1,58 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:    
+    from pages.modules.managers import DataManager
+    from pages.modules.managers.security_manager import ISecurityManager
+
+from demarches_simpy import DossierState
+
 import dash_leaflet as dl
-from dash import DiskcacheManager
 from dotenv import dotenv_values
 from dash_extensions.javascript import Namespace
-import smtplib,ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
 
-## GLOBAL CONFIGURATION
-def CONFIG(key):
+import dotenv
+
+from enum import Enum
+
+class SecurityLevel(Enum):
+    AUTH=0 # Action requires authentication
+    NO_AUTH=1 # Action does not require authentication
+
+
+dotenv.load_dotenv()
+
+class PageConfig():
+    def __init__(self, page_name, data_manager : DataManager = None, security_manager : ISecurityManager = None):
+        self.page_name = page_name
+        self.data_manager = data_manager
+        self.security_manager = security_manager
+    @property
+    def page_name(self):
+        return self.__page_name
+    @page_name.setter
+    def page_name(self, value):
+        self.__page_name = value
+
+    @property
+    def data_manager(self) -> DataManager:
+        return self.__data_manager
+    @data_manager.setter
+    def data_manager(self, value):
+        self.__data_manager = value
+
+    @property
+    def security_manager(self) -> ISecurityManager:
+        return self.__security_manager
+    @security_manager.setter
+    def security_manager(self, value):
+        self.__security_manager = value
+
+
+
+
+def config_env(key):
     value = dotenv_values(".env").get(key) if key in dotenv_values(".env") else ""
     if value == "True":
         return True
@@ -18,164 +61,58 @@ def CONFIG(key):
     else:
         return value
 
+import json
+config_file = json.loads(open('./config.json','r',encoding='utf-8').read())
 
-## EMAIL CONFIGURATION
-def SEND_EMAIL(to,subject,message):
-    port = 465
-    smtp_server = "mail.espaces-naturels.fr"
-    sender_email = CONFIG("SENDER_EMAIL")
-    password = CONFIG("SENDER_PASSWORD")
+def CONFIG(path,default : str ="")->str:
+    '''exemple_key/exemple_key2/exemple_key3'''
+    
+    key = path.split("/")
 
-    msg = MIMEMultipart()
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = to
+    value = config_file
 
-    # Créez une partie texte du message avec l'encodage spécifié
-    part = MIMEText(message, "plain", "utf-8")
-    msg.attach(part)
+    while len(key) > 0:
+        if key[0] in value:
+            value = value[key.pop(0)]
+        else:
+            return default
 
-    try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(sender_email, password)
-            server.sendmail(sender_email, to, msg.as_string())
+    return value
 
-    except Exception as e: 
-        print(e)
-        return {'error':str(e)}
-    return {'message':'Email sent'}
-
-def SEND_EMAIL_WITH_FILE(to,subject,message,file_path,file_name="file.pdf"):
-    port = 465
-    smtp_server = "mail.espaces-naturels.fr"
-    sender_email = CONFIG("SENDER_EMAIL")
-    password = CONFIG("SENDER_PASSWORD")
-
-    msg = MIMEMultipart()
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = to
-
-    # Créez une partie texte du message avec l'encodage spécifié
-    part = MIMEText(message, "plain", "utf-8")
-    msg.attach(part)
-
-    # Créez une partie MIME de base et l'ajoutez au message
-    with open(file_path, "rb") as attachment:
-        # Ajouter un type MIME spécifique
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(attachment.read())
-
-    # Encodez le fichier en caractères ASCII pour l'envoyer par courrier électronique
-    encoders.encode_base64(part)
-
-    # Ajoutez l'en-tête en tant que paire clé / valeur à la pièce jointe
-    part.add_header(
-        "Content-Disposition",
-        f"attachment; filename= {file_name}",
-    )
-
-    msg.attach(part)
-
-    try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(sender_email, password)
-            server.sendmail(sender_email, to, msg.as_string())
-
-    except Exception as e:
-        print(e)
-        return {'error':str(e)}
-    return {'message':'Email sent'}
 
 
 NS_RENDER = Namespace("carto","rendering")
 
-EDIT_STATE = {
-    'none' : True,
-    'en_construction' : True,
-    'en_instruction' : False,
-    "accepte" : False,
-    "refuse" : False,
-    "sans_suite" : False,
-}
 
 STATE_PROPS = {
-    'none' : {
+    DossierState.CONSTRUCTION.value : {
         'color' : '#555555',
         'icon' : 'fa fa-circle',
         'text' : 'En construction'
     },
-    'en_construction' : {
-        'color' : '#555555',
-        'icon' : 'fa fa-circle',
-        'text' : 'En construction'
-    },
-    'en_instruction' : {
+    DossierState.INSTRUCTION.value : {
         'color' : '#ffdd00',
         'icon' : 'fa fa-circle',
         'text' : 'En instruction'
     },
-    "accepte" : {
+    DossierState.ACCEPTE.value : {
         'color' : '#00ff00',
         'icon' : 'fa fa-circle',
         'text' : 'Accepté'
     },
-    "refuse" : {
+    DossierState.REFUSE.value : {
         'color' : '#ff0000',
         'icon' : 'fa fa-circle',
         'text' : 'Refusé'
     },
-    "sans_suite" : {
+    DossierState.SANS_SUITE.value : {
         'color' : '#ff00ff',
         'icon' : 'fa fa-circle',
         'text' : 'Sans suite'
     },
 }
 
-class SavingMode:
-    CREATE = 0
-    UPDATE = 1
-    REQUEST_ST = 2
-    ST_AVIS = 5
-    BLOCK_ACCEPTED = 3
-    BLOCK_REFUSED = 4
 
-    def to_str(mode):
-        if mode == SavingMode.CREATE:
-            return "Continuer sur démarches simplifiées"
-        elif mode == SavingMode.REQUEST_ST:
-            return "Soumettre ST"
-        elif mode == SavingMode.ST_AVIS:
-            return "Valider (ST)"
-        elif mode == SavingMode.BLOCK_ACCEPTED:
-            return "Valider (B)"
-        elif mode == SavingMode.BLOCK_REFUSED:
-            return "Refuser (B)"
-        elif mode == SavingMode.UPDATE:
-            return "Mettre à jour"
-
-
-
-
-#TODO: Make a better config file
-
-## DB CONFIGURATION
-def CONN():
-    from psycopg import connect
-    conn = connect(CONFIG("DB_CONNECTION"))
-    if conn is None:
-        print("Error")
-    else:
-        print("Connected")
-    return conn
-
-
-## ID CONFIGURATION
-SAVE_BUTTON_ID = "comp_save"
-INFO_BOX_ID = "info-box"
-INFO = "info"
 
 ## MAP CONFIGURATION
 EDIT_CONTROL_EDIT_DRAW = {
@@ -213,7 +150,7 @@ tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
                 "&TILEMATRIX={z}" +
                 "&TILEROW={y}" +
                 "&TILECOL={x}")
-tile_url = tile_url.replace("CLEF",CONFIG("IGN_KEY"))
+tile_url = tile_url.replace("CLEF",config_env("IGN_KEY"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 
