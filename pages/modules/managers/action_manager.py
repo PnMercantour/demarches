@@ -394,7 +394,7 @@ class CreatePrefilledDossier(IPackedAction):
         import requests
 
         uuid = kwargs['uuid']
-        demarche_number = CONFIG("general/demarche_number")
+        demarche_number = CONFIG("general/demarche-number")
         
         # Field and Annotation
 

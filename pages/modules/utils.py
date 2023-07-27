@@ -1,7 +1,6 @@
 import os
 import psycopg
 from psycopg import connect
-
 import smtplib,ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -38,6 +37,8 @@ def PolylineToMultistring(features):
     src['coordinates'] = list(map(lambda x: x['geometry']['coordinates'],features))
     return src
 
+def GetAttestationApercuURL(demarche_number : int , dossier_number : int) -> str:
+    return f"https://www.demarches-simplifiees.fr/procedures/{str(demarche_number)}/dossiers/{str(dossier_number)}/apercu_attestation"
 
 class SQL_Fetcher():
    
@@ -67,3 +68,4 @@ class SQL_Fetcher():
         except psycopg.Error as e:
             self.CONN.rollback()
             return {"message": f"SQL ERROR {str(e)}", "type":"error"}
+

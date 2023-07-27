@@ -12,9 +12,9 @@ import dash_bootstrap_components as dbc
 
 from demarches_simpy import DossierState
 
-from carto_editor import APP_INFO_BOX, LOADING_BOX
+from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG
 from pages.modules.managers import Flight
-
+from pages.modules.utils import GetAttestationApercuURL
 
 from pages.modules.interfaces import *
 from pages.modules.flex_components import TriggerCallbackButton
@@ -29,6 +29,7 @@ class AdminPanel(html.Div, IBaseComponent):
     B_SUBMIT = 'b_submit'
     B_CANCEL = 'b_cancel'
     B_REFUSER = 'b_reject'
+    B_ATTESTATION = 'b_attestation'
     B_ACCEPTER = 'b_accept'
     F_EMAIL = 'f_email'
     F_PASSWORD = 'f_password'
@@ -196,7 +197,7 @@ class AdminPanel(html.Div, IBaseComponent):
         disabled_block = True
         disabled_submit = True
         disabled_block = True
-        
+        attestation_url = ""
 
 
         if self.config.data_manager.is_flight_uuid_valid(uuid):
@@ -204,6 +205,7 @@ class AdminPanel(html.Div, IBaseComponent):
             dossier = flight.get_attached_dossier() 
             disabled_block = self.is_st or self.config.data_manager.is_file_closed(dossier)
             disabled_submit = (self.config.data_manager.is_st_token_already_exists(dossier) and not self.is_st) or self.config.data_manager.is_file_closed(dossier)
+            attestation_url = GetAttestationApercuURL(CONFIG('general/demarche-number'), dossier.get_number())
 
         st_label = "Avis ST" if not self.is_st else "Valider"
 
@@ -217,6 +219,7 @@ class AdminPanel(html.Div, IBaseComponent):
                 html.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG), hidden=disabled_submit),
                 html.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), hidden=disabled_block),
                 html.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), hidden=disabled_block),
+                html.A("Attestation", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), hidden=disabled_block, target="_blank", href=attestation_url)
             ],id=self.set_id(AdminPanel.FORM)),
             html.Dialog([
                 html.H3("Prescription ? :" if self.is_st else "Commentaire ? :"),
