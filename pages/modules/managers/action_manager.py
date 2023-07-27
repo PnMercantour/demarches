@@ -5,9 +5,10 @@ if TYPE_CHECKING:
 
 
 
-from pages.modules.config import SecurityLevel
+from pages.modules.config import SecurityLevel, CONFIG
 from pages.modules.utils import PolylineToMultistring, SQL_Fetcher
-from demarches_simpy import Dossier, DossierState, AnnotationModifier, StateModifier
+from demarches_simpy import Demarche, Dossier, DossierState, AnnotationModifier, StateModifier
+from demarches_simpy.utils import DemarchesSimpyException
 from uuid import uuid4
 import json
 
@@ -18,8 +19,17 @@ class PackedActions(IAction):
         IAction.__init__(self, data_manager, security_lvl=security_lvl)
         self.actions : list[IPackedAction] = []
         self.start_values = start_values
+        self.returned_value = {}
+    
+    @property
+    def returned_value(self) -> dict:
+        return self.__returned_value
 
-    def add_action(self, action : IPackedAction) -> None:
+    @returned_value.setter
+    def returned_value(self, value : dict) -> None:
+        self.__returned_value = value
+
+    def add_action(self, action : IPackedAction) -> PackedActions:
         '''Add an action at the end of the list of actions to perform, the order of the actions is the order of the list'''
         self.actions.append(action)
 
@@ -42,7 +52,7 @@ class PackedActions(IAction):
                 self.result = action.result
                 return None
             previous_kwargs = action.passed_kwargs
-
+        self.returned_value = previous_kwargs
         self.result = tmp[-1].result
         return self
         
@@ -123,7 +133,7 @@ class SendSTRequest(IPackedAction):
 
         flight = self.data_manager.get_flight_by_uuid(uuid)
         dossier = flight.get_attached_dossier()
-        url = f"http://localhost:8050/admin/{uuid}?st_token={st_token}"
+        url = CONFIG('url-template/st-link',f"http://localhost:8050/admin/{uuid}?st_token={st_token}").format(flight_id=uuid, st_token=st_token)
         self.header = self.header.format(dossier_number=dossier.get_number(), flight_uuid=uuid)
         self.message = self.message.format(url=url,dossier_url=dossier.get_pdf_url(), dossier_number=dossier.get_number(), dossier_id=dossier.get_id(), flight_uuid=uuid, remarque=self.remarque)
 
@@ -139,7 +149,7 @@ class SendSTRequest(IPackedAction):
 
 class SaveFlight(IPackedAction, SQL_Fetcher):
     def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None) -> None:
-        '''Attached dossier optional, if not provided, the flight will be created without any attached dossier, doing this at the creation'''
+        '''Attached dossier optional, if not provided, the flight will be created without any attached dossier, doing this at the creation. Returnin in passed args uuid'''
         SQL_Fetcher.__init__(self)
         IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
         self.geojson = geojson
@@ -217,9 +227,9 @@ class SendInstruct(IPackedAction):
         return self
 
 class SetAnnotation(IPackedAction):
-    def __init__(self, data_manager: DataManager, dossier : Dossier, prescription : str, annotation_label : str) -> None:
+    def __init__(self, data_manager: DataManager, dossier : Dossier, value : str, annotation_label : str) -> None:
         super().__init__(data_manager, security_lvl=SecurityLevel.AUTH)
-        self.prescription = prescription
+        self.value = value
         self.dossier = dossier
         self.annotation_label = annotation_label
         
@@ -251,7 +261,7 @@ class SetAnnotation(IPackedAction):
         annotation = self.dossier.get_annotations()[self.annotation_label]
         modifier = AnnotationModifier(self.data_manager.profile, self.dossier, instructeur_id=instructeur_id)
 
-        if modifier.perform(annotation, self.prescription) != AnnotationModifier.SUCCESS:
+        if modifier.perform(annotation, self.value) != AnnotationModifier.SUCCESS:
             self.trigger_error('Error during annotation modification')
             return self
 
@@ -372,8 +382,102 @@ class BuildPdf(IPackedAction):
         self.passed_kwargs.update(kwargs)
         return self.trigger_success("PDF building")
 
+class CreatePrefilledDossier(IPackedAction):
+    def __init__(self, data_manager: DataManager) -> None:
+        IPackedAction.__init__(self, data_manager, SecurityLevel.NO_AUTH)
 
+    def perform(self, **kwargs) -> any:
+        if not self.check_correct_passed_kwargs(['uuid'], kwargs):
+            return self
 
+        from uuid import uuid4
+        import requests
+
+        uuid = kwargs['uuid']
+        demarche_number = CONFIG("general/demarche_number")
+        
+        # Field and Annotation
+
+        a_security_token = CONFIG("label-field/security-token", default="security-token")
+        a_instructor_url = CONFIG("label-field/instructor-url", default="instructor-url")
+        f_user_edit_url = CONFIG("label-field/user-edit-link", default="user-edit-link")
+
+        try:
+            demarche = Demarche(demarche_number, self.data_manager.profile)
+
+            annotations = demarche.get_annotations()
+            fields = demarche.get_fields()
+
+            id_security_token = annotations[a_security_token]['id']
+            id_instructor_url = annotations[a_instructor_url]['id']
+            id_user_edit_url = fields[f_user_edit_url]['id']
+
+            security_token = str(uuid4())
+            instructor_url = CONFIG("url-template/admin-link", default="http://localhost:8000").format(flight_id=uuid)
+            user_edit_url = CONFIG("url-template/edit-link", default="http://localhost:8000").format(flight_id=uuid, security_token=security_token)
+            
+            data = {
+                f"champ_{id_security_token}":security_token,
+                f"champ_{id_instructor_url}":instructor_url,
+                f"champ_{id_user_edit_url}":user_edit_url,
+            }
+
+            header = {
+                "Content-Type":"application/json"
+            }
+
+            resp = requests.post(f"https://www.demarches-simplifiees.fr/api/public/v1/demarches/{demarche_number}/dossiers", json=data, headers=header)
+
+            if not resp.ok:
+                self.trigger_error(resp.content)
+                return self
+
+            self.passed_kwargs = {
+                "uuid":uuid,
+                "dossier_url": resp.json()['dossier_url'],
+                "dossier_id": resp.json()['dossier_id'],
+                "dossier_number": resp.json()['dossier_number'],
+            }
+            self.passed_kwargs.update(kwargs)
+            return self.trigger_success("Dossier created", **self.passed_kwargs)
+
+        except DemarchesSimpyException as e:
+            self.trigger_error(e.message)
+            return self
+
+class UpdateFlightDossier(IPackedAction, SQL_Fetcher):
+    def __init__(self, data_manager: DataManager) -> None:
+        IPackedAction.__init__(self, data_manager, SecurityLevel.NO_AUTH)
+        SQL_Fetcher.__init__(self)
+
+    def perform(self, **kwargs) -> any:
+        if not self.check_correct_passed_kwargs(['uuid', 'dossier_id', 'dossier_number'], kwargs):
+            return self
+
+        uuid = kwargs['uuid']
+        dossier_id = kwargs['dossier_id']
+        dossier_number = kwargs['dossier_number']
+
+        resp = self.fetch_sql(sql_request='INSERT INTO survol.dossier (dossier_id, dossier_number) VALUES (%s, %s) RETURNING dossier_id', request_args=[dossier_id, dossier_number], commit=True)
+
+        if self.is_sql_error(resp):
+            self.trigger_error(resp['message'])
+            return self
+
+        dossier_id = resp[0][0]
+
+        resp = self.fetch_sql(sql_request='UPDATE survol.carte SET dossier_id = %s WHERE uuid = %s RETURNING dossier_id', request_args=[dossier_id, uuid], commit=True)
+        
+        if self.is_sql_error(resp):
+            self.trigger_error(resp['message'])
+            return self
+
+        self.passed_kwargs = {
+            "uuid":uuid,
+        }
+        self.passed_kwargs.update(kwargs)
+        return self.trigger_success("Dossier updated", **self.passed_kwargs)
+        
 
 
 

@@ -98,21 +98,22 @@ class DataManager(SQL_Fetcher):
         self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2])
 
     def __fetch_dossier__(self, id: str):
-        resp = self.fetch_sql(sql_request="SELECT dossier_id, dossier_number, last_carte FROM survol.dossier WHERE dossier_id = %s", request_args=[id])
+        resp = self.fetch_sql(sql_request="SELECT dossier_id, dossier_number FROM survol.dossier WHERE dossier_id = %s", request_args=[id])
         
         if self.is_sql_error(resp) or len(resp) == 0:
             print(resp['message'])
             self.dossier_cache[id] = None
             return
         self.dossier_cache[id] = Dossier(resp[0][1], self.profile, resp[0][0])
-        self.dossier_linked_to_last_flight[self.dossier_cache[id]] = self.get_flight_by_uuid(resp[0][2])
     
     def get_dossier_by_id(self, id: str) -> Dossier:
-        if not id in self.dossier_cache:
+        if not id in self.dossier_cache or self.dossier_cache[id] == None:
             self.__fetch_dossier__(id)
         return self.dossier_cache[id]
     def get_dossier_by_number(self, number: int) -> Dossier:
         for dossier in self.dossier_cache.values():
+            if dossier == None:
+                continue
             if dossier.get_number() == number:
                 return dossier
         else:

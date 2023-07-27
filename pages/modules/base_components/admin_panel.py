@@ -10,7 +10,10 @@ if TYPE_CHECKING:
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
-from pages.modules.data import APP_INFO_BOX, LOADING_BOX
+from demarches_simpy import DossierState
+
+from carto_editor import APP_INFO_BOX, LOADING_BOX
+from pages.modules.managers import Flight
 
 
 from pages.modules.interfaces import *
@@ -88,7 +91,7 @@ class AdminPanel(html.Div, IBaseComponent):
         skeleton = CONFIG("email-templates/st-prescription")
 
         st_prescription = SendInstruct(self.config.data_manager,skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), avis)
-        set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("ds_label_field/st-prescription"))
+        set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/st-prescription"))
 
         packed_actions.add_action(set_annotation)
         packed_actions.add_action(st_prescription)
@@ -121,48 +124,56 @@ class AdminPanel(html.Div, IBaseComponent):
         else:
             return self.__fnc_st_prescription_trigger__(packed_actions, avis, uuid, dossier)
 
-    def __fnc_accept_trigger__(self, data, geojson, email, password, avis):
-        from pages.modules.managers import PackedActions, SaveFlight, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState
-        from demarches_simpy import DossierState
-        from pages.modules.config import CONFIG
+    def build_fnc_finalized_state(self, state : DossierState):
+        if state != DossierState.ACCEPTE or state != DossierState.REFUSE or state != DossierState.SANS_SUITE:
+            state = DossierState.REFUSE
+        '''Return the custom function based on the state'''
+        def __tmp__(self, data, geojson, email, password, avis):
+            from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState
+            from pages.modules.config import CONFIG
 
-        uuid = data['uuid']
-        flight = self.config.data_manager.get_flight_by_uuid(uuid)
-        dossier = flight.get_attached_dossier().force_fetch()
-        skeleton = CONFIG("email-templates/dossier-accepted")
-        pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
+            uuid = data['uuid']
+            flight = self.config.data_manager.get_flight_by_uuid(uuid)
+            dossier = flight.get_attached_dossier().force_fetch()
+            skeleton = CONFIG("email-templates/dossier-accepted") if state == DossierState.ACCEPTE else CONFIG("email-templates/dossier-refused")
+            pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
+            attestation_url=lambda dossier : dossier.force_fetch().get_data()['dossier']['attestation']['url'] if state == DossierState.ACCEPTE else ""
+            self.process_connection(data, email, password)
+            if not self.config.security_manager.is_logged:
+                return [{"message" : "Invalid credentials", 'type':"error"}, False]
 
-        self.process_connection(data, email, password)
-        if not self.config.security_manager.is_logged:
-            return [{"message" : "Invalid credentials", 'type':"error"}, False]
+            packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid})
 
-        packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid})
+            # Common Actions
+            saving_flight = SaveFlight(self.config.data_manager, geojson)
 
-        # Common Actions
-        saving_flight = SaveFlight(self.config.data_manager, geojson)
+            new_flight = saving_flight.precondition()
 
-        new_flight = saving_flight.precondition()
-
-        delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
-        change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, DossierState.ACCEPTE)
-        build_pdf = BuildPdf(self.config.data_manager, dossier, geojson if new_flight else Flight.build_complete_geojson(flight))
-        send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis, pdf_url=pdf_url, attestation_url=lambda dossier : dossier.force_fetch().get_data()['dossier']['attestation']['url'])
+            delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
+            add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
+            change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
+            build_pdf = BuildPdf(self.config.data_manager, dossier, geojson if new_flight else Flight.build_complete_geojson(flight))
+            send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis, pdf_url=pdf_url, attestation_url=attestation_url )
 
 
-        if new_flight:
-            packed_actions.add_action(saving_flight)
+            if new_flight:
+                packed_actions.add_action(saving_flight)
 
-        packed_actions.add_action(delete_st_token)
-        packed_actions.add_action(change_dossier_state)
-        packed_actions.add_action(build_pdf)
-        packed_actions.add_action(send_instruct)
+            packed_actions.add_action(delete_st_token)
+            if state == DossierState.ACCEPTE:
+                packed_actions.add_action(add_pdf_url_to_dossier).add_action(change_dossier_state).add_action(build_pdf)
+            else:
+                packed_actions.add_action(change_dossier_state)
+            packed_actions.add_action(send_instruct)
 
-        return [self.config.security_manager.perform_action(packed_actions),True]
-
+            return [self.config.security_manager.perform_action(packed_actions),True]
+        return __tmp__
 
     def __fnc_submit_trigger__(self, data, geojson, email, password, avis):
         if self.mode == self.ACCEPTER_ACTION:
-            return self.__fnc_accept_trigger__(data, geojson, email, password, avis)
+            return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis)
+        elif self.mode == self.REFUSER_ACTION:
+            return self.build_fnc_finalized_state(DossierState.REFUSE)(self, data, geojson, email, password, avis)
         elif self.mode == self.SUBMIT_ACTION:
             return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis)
 

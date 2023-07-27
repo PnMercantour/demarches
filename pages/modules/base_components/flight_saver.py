@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from demarches_simpy import DossierState
 
-from pages.modules.data import APP_INFO_BOX, LOADING_BOX
+from carto_editor import APP_INFO_BOX, LOADING_BOX, SecurityLevel
 
 
 
@@ -40,7 +40,7 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         dossier = flight.get_attached_dossier()
         return dossier.get_dossier_state() != DossierState.CONSTRUCTION or self.config.data_manager.is_file_closed(dossier)
 
-    def __fnc_save__(self, data, geojson):  
+    def __fnc_update__(self, data, geojson):  
         from pages.modules.managers import SaveFlight
 
         uuid = data['uuid']
@@ -61,6 +61,22 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         save_flight = SaveFlight(self.config.data_manager, geojson, dossier)
         return [self.config.security_manager.perform_action(save_flight),False]
 
+    def __fnc_create(self, geojson):
+        from pages.modules.managers import CreatePrefilledDossier, SaveFlight, UpdateFlightDossier, PackedActions
+        from dash import dcc, no_update
+        save_flight = SaveFlight(self.config.data_manager, geojson)
+        create_dossier = CreatePrefilledDossier(self.config.data_manager)
+        update_flight = UpdateFlightDossier(self.config.data_manager)
+
+        packed_actions = PackedActions(self.config.data_manager,{}, SecurityLevel.NO_AUTH)
+        packed_actions.add_action(save_flight)
+        packed_actions.add_action(create_dossier)
+        packed_actions.add_action(update_flight)
+
+        result = self.config.security_manager.perform_action(packed_actions)
+        url = packed_actions.returned_value['dossier_url'] if 'dossier_url' in packed_actions.returned_value else None
+        return [dcc.Location(href=url, id="finalized", refresh=True) if url != None else no_update,result, False]
+
     def __get_root_style__(self):
         return {'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'}
     def __get_layout__(self):
@@ -77,9 +93,13 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
 
     def set_internal_callback(self) -> None:
         ## Init callback
-        self.incoming_data.set_callback(self.get_prefix(), self.__fnc_save_init__, 'hidden')
 
+        if self.saving_mode == self.SAVE_UPDATE:
+            self.incoming_data.set_callback(self.get_prefix(), self.__fnc_save_init__, 'hidden')
 
-        self.add_state(self.incoming_data.get_prefix(), 'data')
-        self.add_state(self.map.get_comp_edit(), 'geojson')
-        self.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()], self.__fnc_save__, 'data', prevent_initial_call=True)
+            self.add_state(self.incoming_data.get_prefix(), 'data')
+            self.add_state(self.map.get_comp_edit(), 'geojson')
+            self.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()], self.__fnc_update__, 'data', prevent_initial_call=True)
+        elif self.saving_mode == self.SAVE_CREATE:
+            self.add_state(self.map.get_comp_edit(), 'geojson')
+            self.set_callback([self.get_prefix(), APP_INFO_BOX.get_output(), LOADING_BOX.get_output()], self.__fnc_create, 'children', prevent_initial_call=True)

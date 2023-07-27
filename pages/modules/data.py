@@ -30,8 +30,9 @@ class BuiltInCallbackFnc():
         self.data_manager = data_manager
     
     def flight_fetch(self, data):
-        from pages.modules.managers.data_manager import Flight
         '''Need a IncomingData object as an Input of the callback, Return the geojson and an output message'''
+
+        from pages.modules.managers.data_manager import Flight
         flight = self.data_manager.get_flight_by_uuid(data['uuid'])
         if flight == None:
             return [None, APP_INFO_BOX.build_message("Flight not found", 'error')]

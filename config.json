@@ -1,4 +1,7 @@
 {
+    "general" : {
+        "demarche_number": 77818
+    },
     "email-templates": {
         "st-requesting": {
             "subject": "Validation ST dossier n°{dossier_number}",
@@ -11,13 +14,23 @@
         "dossier-accepted":{
             "subject": "Dossier n°{dossier_number} accepté",
             "body-path": "./email-templates/dossier-accepted.txt"
+        },
+        "dossier-refused":{
+            "subject": "Dossier n°{dossier_number} refusé",
+            "body-path": "./email-templates/dossier-refused.txt"
         }
     },
-    "ds_label_field":{
+    "label-field":{
         "st-prescription": "st-prescription",
-        "security-token" : "security-token"
+        "security-token" : "security-token",
+        "instructor-url" : "url-instructeur",
+        "flight-pdf-url" : "plan-de-vol",
+        "user-edit-link" : "Lien"
     },
     "url-template":{
-        "pdf-path" : "http://localhost:8050/pdf/flight_{dossier_id}.pdf"
+        "pdf-path" : "http://localhost:8050/pdf/flight_{dossier_id}.pdf",
+        "st-link" : "http://localhost:8050/st/{flight_id}?st_token={st_token}",
+        "edit-link" : "http://localhost:8050/edit/{flight_id}?security_token={security_token}",
+        "admin-link" : "http://localhost:8050/admin/{flight_id}"
     }
 }
