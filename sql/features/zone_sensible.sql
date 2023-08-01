@@ -1,0 +1,1 @@
+SELECT geojson FROM survol.zone_sensible_geojson LIMIT 1;

@@ -1,6 +1,7 @@
 import os
 import psycopg
 from psycopg import connect
+import psycopg as pg
 import smtplib,ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -41,11 +42,18 @@ def GetAttestationApercuURL(demarche_number : int , dossier_number : int) -> str
     return f"https://www.demarches-simplifiees.fr/procedures/{str(demarche_number)}/dossiers/{str(dossier_number)}/apercu_attestation"
 
 
+def conn():
+    conn = pg.connect(os.getenv("DB_CONNECTION"))
+    if conn is None:
+        print("Error")
+    else:
+        print("Connected")
+    return conn
+
 class SQL_Fetcher():
    
     def __init__(self):
-        from carto_editor import CONN
-        self.CONN = CONN
+        self.CONN = conn()
 
     def is_sql_error(self, resp):
         return isinstance(resp, dict) and "type" in resp and resp["type"] == "error"

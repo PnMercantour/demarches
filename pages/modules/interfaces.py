@@ -77,6 +77,7 @@ class IAction():
         return self
 
     def trigger_success(self, str):
+        '''Trigger a success message with a data friendly message'''
         self.is_error = False
         self.result = {"message" : str, "type" : "success"}
         return self

@@ -70,7 +70,7 @@ class Carte(dl.Map, IBaseComponent):
             return [self.CENTER, self.ZOOM]
         geojson = flight.get_geojson()
         #Inverse lat long
-        return [[geojson["geometry"]["coordinates"][0][0][1], geojson["geometry"]["coordinates"][0][0][0]], 12]
+        return [[geojson["geometry"]["coordinates"][0][1], geojson["geometry"]["coordinates"][0][0]], 12]
 
 
     def __get_root_style__(self):

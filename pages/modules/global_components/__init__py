@@ -1,2 +1,3 @@
 from .info_box import InfoBox
 from .loading_box import LoadingBox
+from .flight_selector import FlightSelector

@@ -2,7 +2,7 @@ import dash
 from dash import html
 import dash_leaflet as dl
 
-from carto_editor import NS_RENDER, PageConfig, BuiltInCallbackFnc
+from carto_editor import NS_RENDER, PageConfig, BuiltInCallbackFnc, arrow_function
 from pages.modules.base_components import IncomingData, Carte
 from pages.modules.data import APP_INFO_BOX, CACHE
 from pages.modules.managers import DataManager, UserSecurity
@@ -22,7 +22,10 @@ map = Carte(config,forceEdit=True,incoming_data=url_data)
 
 Carte.SetAllFeatures(map)
 
-map.addGeoJson(None,id="flight", options=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
+map.addGeoJson(None,id="flight",
+options=dict(style=NS_RENDER('flight_style'), onEachFeature=NS_RENDER('flight_init')),
+hoverStyle=arrow_function(dict(weight=8, color='#ff9999', dashArray='')),
+)
 
 
 callbacks = BuiltInCallbackFnc(data_manager)

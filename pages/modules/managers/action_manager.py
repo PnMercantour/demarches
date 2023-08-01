@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from pages.modules.managers.data_manager import DataManager
+    from pages.modules.managers.data_manager import DataManager, Flight
 
 
 
@@ -15,11 +15,17 @@ import json
 from pages.modules.interfaces import IAction, IPackedAction
 
 class PackedActions(IAction):
-    def __init__(self, data_manager: DataManager, start_values : dict[str, any],  security_lvl : SecurityLevel = SecurityLevel.AUTH) -> None:
+    def __init__(self, data_manager: DataManager, start_values : dict[str, any],  security_lvl : SecurityLevel = SecurityLevel.AUTH, **kwargs) -> None:
         IAction.__init__(self, data_manager, security_lvl=security_lvl)
         self.actions : list[IPackedAction] = []
         self.start_values = start_values
         self.returned_value = {}
+
+        if 'verbose' in kwargs:
+            self.verbose = kwargs['verbose']
+        else:
+            self.verbose = False
+
     
     @property
     def returned_value(self) -> dict:
@@ -32,6 +38,7 @@ class PackedActions(IAction):
     def add_action(self, action : IPackedAction) -> PackedActions:
         '''Add an action at the end of the list of actions to perform, the order of the actions is the order of the list'''
         self.actions.append(action)
+        return self
 
     def precondition(self) -> bool:
         for action in self.actions:
@@ -52,6 +59,8 @@ class PackedActions(IAction):
                 self.result = action.result
                 return None
             previous_kwargs = action.passed_kwargs
+        if self.verbose:
+            print(tmp)
         self.returned_value = previous_kwargs
         self.result = tmp[-1].result
         return self
@@ -148,11 +157,12 @@ class SendSTRequest(IPackedAction):
         return self
 
 class SaveFlight(IPackedAction, SQL_Fetcher):
-    def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None) -> None:
+    def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None, template_uuid : str = None) -> None:
         '''Attached dossier optional, if not provided, the flight will be created without any attached dossier, doing this at the creation. Returnin in passed args uuid'''
         SQL_Fetcher.__init__(self)
         IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
         self.geojson = geojson
+        self.template_uuid = template_uuid
         self.dossier = attached_dossier
 
     def precondition(self) -> bool:
@@ -174,7 +184,8 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         dossier_id = dossier.get_id() if dossier is not None else None
         geom = PolylineToMultistring(self.geojson['features'])
         geom = json.dumps(geom)
-        resp = self.fetch_sql(sql_request="INSERT INTO survol.carte (geom, dossier_id) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s) RETURNING uuid::text", request_args=[geom, dossier_id], commit=True)
+
+        resp = self.fetch_sql(sql_request="INSERT INTO survol.flight_history (geom, dossier_id, linked_template) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s, %s) RETURNING uuid::text", request_args=[geom, dossier_id, self.template_uuid], commit=True)
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
             return self
@@ -285,7 +296,7 @@ class DeleteSTToken(IPackedAction, SQL_Fetcher):
             return False
 
         if len(resp) == 0:
-            self.trigger_error("No token found")
+            self.trigger_error("No st token found, have you already request st ?")
             return False
 
         return True
@@ -466,7 +477,7 @@ class UpdateFlightDossier(IPackedAction, SQL_Fetcher):
 
         dossier_id = resp[0][0]
 
-        resp = self.fetch_sql(sql_request='UPDATE survol.carte SET dossier_id = %s WHERE uuid = %s RETURNING dossier_id', request_args=[dossier_id, uuid], commit=True)
+        resp = self.fetch_sql(sql_request='UPDATE survol.flight_history SET dossier_id = %s WHERE uuid = %s RETURNING dossier_id', request_args=[dossier_id, uuid], commit=True)
         
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
@@ -478,6 +489,53 @@ class UpdateFlightDossier(IPackedAction, SQL_Fetcher):
         self.passed_kwargs.update(kwargs)
         return self.trigger_success("Dossier updated", **self.passed_kwargs)
         
+class SaveNewTemplate(IPackedAction, SQL_Fetcher):
+    def __init__(self, data_manager: DataManager) -> None:
+        IPackedAction.__init__(self, data_manager, SecurityLevel.NO_AUTH)
+        SQL_Fetcher.__init__(self)
+        
+    def perform(self, **kwargs) -> any:
+        
+        if not self.check_correct_passed_kwargs(['uuid'], kwargs):
+            return self
+
+        uuid = kwargs['uuid']
+
+        self.passed_kwargs = kwargs
+
+        flight = self.data_manager.get_flight_by_uuid(uuid)
+
+        if flight is None:
+            return self.trigger_error("Flight not found")
+        
+        resp = self.fetch_sql(sql_request='SELECT linked_template::text from survol.flight_history WHERE uuid = %s', request_args=[uuid])
+
+        if self.is_sql_error(resp):
+            return self.trigger_error(resp['message'])
+        print(resp)
+        if resp[0][0] != None:
+            return self.trigger_success("No template to save")
+
+        print('Saving template')
+
+        resp_2 = self.fetch_sql(sql_file='./sql/push_template.sql', request_args=[uuid], commit=True)
+            
+        if self.is_sql_error(resp_2):
+            return self.trigger_error(resp_2['message'])
+
+        template_id = resp_2[0][0]
+
+        resp_3 = self.fetch_sql(sql_request='UPDATE survol.flight_history SET linked_template = %s where uuid = %s RETURNING linked_template', request_args=[template_id, uuid], commit=True)
+
+        if self.is_sql_error(resp_3):
+            return self.trigger_error(resp_3['message'])
+
+        
+        return self.trigger_success("Template saved")
+
+
+
+
 
 
 

@@ -10,7 +10,7 @@ from demarches_simpy import DossierState
 
 import dash_leaflet as dl
 from dotenv import dotenv_values
-from dash_extensions.javascript import Namespace
+from dash_extensions.javascript import Namespace, arrow_function
 
 import dotenv
 import os

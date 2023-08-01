@@ -12,7 +12,7 @@ import dash_bootstrap_components as dbc
 
 from demarches_simpy import DossierState
 
-from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG
+from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR
 from pages.modules.managers import Flight
 from pages.modules.utils import GetAttestationApercuURL
 
@@ -99,25 +99,31 @@ class AdminPanel(html.Div, IBaseComponent):
 
         return [self.config.security_manager.perform_action(packed_actions),True]
     
-    def __fnc_st_redirection_trigger__(self, data, geojson, email, password, avis):
+    def __fnc_st_redirection_trigger__(self, data, geojson, email, password, avis, selected):
         from pages.modules.managers import PackedActions, SaveFlight
 
         uuid = data['uuid']
-        dossier =  self.config.data_manager.get_flight_by_uuid(uuid).get_attached_dossier().force_fetch()
+        flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
+        dossier =  flight.get_attached_dossier().force_fetch()
         st_token = data['st_token']
 
         self.process_connection(data, email, password)
         if not self.config.security_manager.is_logged:
             return [{"message" : "Invalid credentials", 'type':"error"}, False]
         
-        packed_actions = PackedActions(self.config.data_manager, start_values={'uuid':uuid, 'dossier':dossier})
+        packed_actions = PackedActions(self.config.data_manager, start_values={'uuid':uuid, 'dossier':dossier}, verbose=True)
         
         # Common Actions
-        
-        saving_flight = SaveFlight(self.config.data_manager, geojson)
+        saving_flight = SaveFlight(self.config.data_manager, geojson, dossier)
 
+        #Check if the geojson fetched by the edit component is valid, if not, it means there is no new flight
         if saving_flight.precondition():
             packed_actions.add_action(saving_flight)
+        #Check if the flight selected is not the current one, if not, it means the user wants to change the flight
+        elif flight.get_last_flight().get_id() != selected:
+            #Get the new flight
+            new_flight = self.config.data_manager.get_flight_by_uuid(selected)
+            packed_actions.add_action(SaveFlight(self.config.data_manager, Flight.build_complete_geojson(new_flight), dossier, new_flight.get_id() if new_flight.is_template() else None))
 
 
         if st_token is None:
@@ -126,15 +132,15 @@ class AdminPanel(html.Div, IBaseComponent):
             return self.__fnc_st_prescription_trigger__(packed_actions, avis, uuid, dossier)
 
     def build_fnc_finalized_state(self, state : DossierState):
-        if state != DossierState.ACCEPTE or state != DossierState.REFUSE or state != DossierState.SANS_SUITE:
+        if state != DossierState.ACCEPTE and state != DossierState.REFUSE and state != DossierState.SANS_SUITE:
             state = DossierState.REFUSE
         '''Return the custom function based on the state'''
-        def __tmp__(self, data, geojson, email, password, avis):
-            from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState
+        def __tmp__(self, data, geojson, email, password, avis, selected):
+            from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState, SaveNewTemplate
             from pages.modules.config import CONFIG
 
             uuid = data['uuid']
-            flight = self.config.data_manager.get_flight_by_uuid(uuid)
+            flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
             dossier = flight.get_attached_dossier().force_fetch()
             skeleton = CONFIG("email-templates/dossier-accepted") if state == DossierState.ACCEPTE else CONFIG("email-templates/dossier-refused")
             pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
@@ -146,23 +152,28 @@ class AdminPanel(html.Div, IBaseComponent):
             packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid})
 
             # Common Actions
-            saving_flight = SaveFlight(self.config.data_manager, geojson)
+            saving_flight = SaveFlight(self.config.data_manager, geojson, dossier)
 
             new_flight = saving_flight.precondition()
 
             delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
-            add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
+            add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
             build_pdf = BuildPdf(self.config.data_manager, dossier, geojson if new_flight else Flight.build_complete_geojson(flight))
             send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis, pdf_url=pdf_url, attestation_url=attestation_url )
-
+            save_new_template = SaveNewTemplate(self.config.data_manager)
 
             if new_flight:
                 packed_actions.add_action(saving_flight)
+            #Check if the flight selected is not the current one, if not, it means the user wants to change the flight
+            elif flight.get_last_flight().get_id() != selected:
+                #Get the new flight
+                new_flight = self.config.data_manager.get_flight_by_uuid(selected)
+                packed_actions.add_action(SaveFlight(self.config.data_manager, Flight.build_complete_geojson(new_flight), dossier, new_flight.get_id() if new_flight.is_template() else None))
 
             packed_actions.add_action(delete_st_token)
             if state == DossierState.ACCEPTE:
-                packed_actions.add_action(add_pdf_url_to_dossier).add_action(change_dossier_state).add_action(build_pdf)
+                packed_actions.add_action(save_new_template).add_action(add_pdf_url_to_dossier).add_action(change_dossier_state).add_action(build_pdf)
             else:
                 packed_actions.add_action(change_dossier_state)
             packed_actions.add_action(send_instruct)
@@ -170,13 +181,13 @@ class AdminPanel(html.Div, IBaseComponent):
             return [self.config.security_manager.perform_action(packed_actions),True]
         return __tmp__
 
-    def __fnc_submit_trigger__(self, data, geojson, email, password, avis):
+    def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected):
         if self.mode == self.ACCEPTER_ACTION:
-            return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis)
+            return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis, selected)
         elif self.mode == self.REFUSER_ACTION:
-            return self.build_fnc_finalized_state(DossierState.REFUSE)(self, data, geojson, email, password, avis)
+            return self.build_fnc_finalized_state(DossierState.REFUSE)(self, data, geojson, email, password, avis, selected)
         elif self.mode == self.SUBMIT_ACTION:
-            return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis)
+            return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis, selected)
 
 
     def __init__(self,pageConfig: PageConfig, map: Carte, incoming_data : IncomingData):
@@ -219,7 +230,8 @@ class AdminPanel(html.Div, IBaseComponent):
                 html.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG), hidden=disabled_submit),
                 html.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), hidden=disabled_block),
                 html.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), hidden=disabled_block),
-                html.A("Attestation", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), hidden=disabled_block, target="_blank", href=attestation_url)
+                html.A("Attestation", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), hidden=disabled_block, target="_blank", href=attestation_url),
+                test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             html.Dialog([
                 html.H3("Prescription ? :" if self.is_st else "Commentaire ? :"),
@@ -235,7 +247,21 @@ class AdminPanel(html.Div, IBaseComponent):
         submit_button.add_state(self.get_id(self.F_EMAIL), "value")
         submit_button.add_state(self.get_id(self.F_PASSWORD), "value")
         submit_button.add_state(self.get_id(self.F_AVIS), "value")
+        submit_button.add_state(SELECTOR.get_prefix(), "data")
         submit_button.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()] , self.__fnc_submit_trigger__, ['data','hidden'], prevent_initial_call=True)
+
+
+        def __test__(data):
+            uuid = data['uuid']
+            flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
+            from pages.modules.managers.action_manager import SaveNewTemplate
+
+            save = SaveNewTemplate(self.config.data_manager)
+            return save.perform(uuid=flight.get_id()).result
+
+        
+        test.add_state(self.incoming_data.get_prefix() , "data")
+        test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
 
 
         return layout

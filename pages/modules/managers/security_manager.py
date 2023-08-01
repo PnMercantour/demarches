@@ -25,7 +25,7 @@ class AdminSecurity(ISecurityManager):
         password = data['password']
         flight_uuid = data['uuid']
         dossier_ctx = self.data_manager.get_flight_by_uuid(flight_uuid).get_attached_dossier()
-        dossier_ctx.force_fetch()
+        dossier_ctx = dossier_ctx.force_fetch()
         instructeurs = dossier_ctx.get_attached_instructeurs_info()
 
         for instructeur in instructeurs:

@@ -3,7 +3,7 @@ import dash
 
 from flask import Response
 
-from carto_editor import APP_INFO_BOX, LOADING_BOX
+from carto_editor import APP_INFO_BOX, LOADING_BOX, SELECTOR
 
 
 ## CACHE
@@ -18,6 +18,7 @@ app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
     html.H1("Carto Editor", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'}),
     dcc.Loading(html.Div('X', hidden=True, id="long-task"), style={"zIndex":"1000", "position":"absolute", "bottom":"0px", "right":"0px", "width":"100%", "height":"100%"}, type="circle"),
+    SELECTOR,
     LOADING_BOX,
     APP_INFO_BOX,
     # #Main content

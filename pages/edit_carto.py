@@ -1,7 +1,7 @@
 import dash
 from dash import html
 import dash_leaflet as dl
-from pages.modules.config import NS_RENDER, PageConfig
+from pages.modules.config import NS_RENDER, PageConfig, arrow_function
 from pages.modules.base_components import IncomingData, Carte, DossierInfo, FlightSaver
 from pages.modules.data import APP_INFO_BOX, BuiltInCallbackFnc
 from pages.modules.managers import DataManager, UserSecurity
@@ -18,8 +18,11 @@ map = Carte(config, incoming_data=url_data)
 ## FETCHING FEATURES
 Carte.SetAllFeatures(map)
 
-map = map.addGeoJson(None,id="flight", options=dict(style={'opacity': 0.8}, onEachFeature=NS_RENDER('draw_arrow')))
 
+map.addGeoJson(None,id="flight",
+options=dict(style=NS_RENDER('flight_style'), onEachFeature=NS_RENDER('flight_init')),
+hoverStyle=arrow_function(dict(weight=8, color='#ff9999', dashArray='')),
+)
 
 
 file_info = DossierInfo(config, incoming_data=url_data)

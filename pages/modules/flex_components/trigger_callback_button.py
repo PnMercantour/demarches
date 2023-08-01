@@ -28,5 +28,5 @@ class TriggerCallbackButton(html.Button, CustomCallback):
         def __set__(n_clicks, *args):
             if n_clicks is not None and n_clicks > 0:
                 return fnc(*args)
-            return [no_update for _ in range(len(outputs))]
+            return [no_update for _ in range(len(outputs) if isinstance(outputs, list) else 1)]
 
