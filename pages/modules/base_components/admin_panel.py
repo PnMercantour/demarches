@@ -22,8 +22,12 @@ from pages.modules.flex_components import TriggerCallbackButton
 
 class AdminPanel(html.Div, IBaseComponent):
     ## STYLE
-    BUTTON_STYLE = {'margin':'1vh','backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'}
-    FIELD_STYLE = {'margin':'1vh','height': '30px', 'lineHeight': '30px', 'borderRadius': '5px', 'border': '1px solid lightgrey', 'padding': '0px 10px'}
+    BUTTON_STYLE = {'margin':'1vh'}
+    FIELD_STYLE = {'margin':'1vh'}
+
+    BUTTON_CLASS = ''
+    FIELD_CLASS = ''
+    GROUP_CLASS = 'm-3 d-flex align-items-center justify-content-center'
     ## ID
     B_TRIGGER_DIALOG = 'b_trigger_dialog'
     B_SUBMIT = 'b_submit'
@@ -195,7 +199,7 @@ class AdminPanel(html.Div, IBaseComponent):
         self.incoming_data = incoming_data
         self.map = map
         IBaseComponent.__init__(self, pageConfig)
-        html.Div.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__())
+        html.Div.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__(), className=self.__get_root_class__())
 
         
         self.set_internal_callback()
@@ -210,7 +214,8 @@ class AdminPanel(html.Div, IBaseComponent):
         disabled_block = True
         attestation_url = ""
 
-
+        is_hidden = lambda x : "d-none" if x else ""
+        ## CHECK THE FLIGHT VALIDITY
         if self.config.data_manager.is_flight_uuid_valid(uuid):
             flight = self.config.data_manager.get_flight_by_uuid(uuid)
             dossier = flight.get_attached_dossier() 
@@ -220,25 +225,33 @@ class AdminPanel(html.Div, IBaseComponent):
 
         st_label = "Avis ST" if not self.is_st else "Valider"
 
-
+        ## BUILD THE LAYOUT
         layout = html.Div([
-            dbc.Form([
+            dbc.InputGroup([
                 html.Div([
-                    dcc.Input(type="email", placeholder="Instructeur Email", style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_EMAIL)),
-                    dcc.Input(type="password", placeholder="Instructeur Password", style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_PASSWORD)),
-                ],id=self.set_id(AdminPanel.LOGIN_FIELD), hidden=disabled_block),
-                html.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG), hidden=disabled_submit),
-                html.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), hidden=disabled_block),
-                html.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), hidden=disabled_block),
-                html.A("Attestation", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), hidden=disabled_block, target="_blank", href=attestation_url),
-                test := TriggerCallbackButton(self.set_id('test'), children='test')
+                    dbc.Input(type="email", placeholder="Instructeur Email", className=self.FIELD_CLASS,style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_EMAIL)),
+                    dbc.Input(type="password", placeholder="Instructeur Password", className=self.FIELD_CLASS, style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_PASSWORD)),
+                ],id=self.set_id(AdminPanel.LOGIN_FIELD), className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
+                html.Div([
+                    dbc.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG),className=self.BUTTON_CLASS, color='warning' if not self.is_st else 'success'),
+                ], className=f"{is_hidden(disabled_submit)} {self.GROUP_CLASS}"),
+                html.Div([
+                    dbc.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), className=self.BUTTON_CLASS, color="success"),
+                    dbc.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), className=self.BUTTON_CLASS, color="danger"),
+                    dbc.Button("Attestation", className=self.BUTTON_CLASS+' btn-primary', style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), href=attestation_url),
+                ], className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
+                test := TriggerCallbackButton(self.set_id('test'), children='test', hidden=True)
             ],id=self.set_id(AdminPanel.FORM)),
-            html.Dialog([
-                html.H3("Prescription ? :" if self.is_st else "Commentaire ? :"),
-                dcc.Input(type="text", placeholder="", style=AdminPanel.FIELD_STYLE, id=self.set_id(AdminPanel.F_AVIS)),
+            dbc.Modal([
+                dbc.ModalHeader(dbc.ModalTitle("Prescription ?" if self.is_st else "Commentaire ?")),
+                dbc.ModalBody([
+                dbc.Input(type="text", placeholder="", style=AdminPanel.FIELD_STYLE, id=self.set_id(AdminPanel.F_AVIS)),
+                ]),
+                dbc.ModalFooter([
                 submit_button := TriggerCallbackButton(self.set_id(self.B_SUBMIT), children = "Envoyer", style=AdminPanel.BUTTON_STYLE),
-                html.Button("Annuler", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_CANCEL))
-            ], style={"zIndex":"900"},id=self.set_id(AdminPanel.DIALOG_BOX),open=False)
+                dbc.Button("Annuler", style=AdminPanel.BUTTON_STYLE, color='danger', id=self.set_id(AdminPanel.B_CANCEL))
+                ])
+            ],id=self.set_id(AdminPanel.DIALOG_BOX),is_open=False)
         ])
 
         ## ADD SUBMIT CALLBACK
@@ -250,7 +263,7 @@ class AdminPanel(html.Div, IBaseComponent):
         submit_button.add_state(SELECTOR.get_prefix(), "data")
         submit_button.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()] , self.__fnc_submit_trigger__, ['data','hidden'], prevent_initial_call=True)
 
-
+        ## ADD TEST CALLBACK
         def __test__(data):
             uuid = data['uuid']
             flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
@@ -268,8 +281,6 @@ class AdminPanel(html.Div, IBaseComponent):
 
 
 
-
-
     def set_internal_callback(self):
         from dash import callback, no_update
         from dash import callback_context as ctx
@@ -277,7 +288,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
         ## INIT DIALOG
         @callback(
-        Output(self.get_id(AdminPanel.DIALOG_BOX), 'open'),
+        Output(self.get_id(AdminPanel.DIALOG_BOX), 'is_open'),
         [Input(self.get_id(AdminPanel.B_TRIGGER_DIALOG),'n_clicks'), Input(self.get_id(AdminPanel.B_CANCEL),'n_clicks'), Input(self.get_id(AdminPanel.B_ACCEPTER),'n_clicks'), Input(self.get_id(AdminPanel.B_REFUSER),'n_clicks'), Input(self.get_id(AdminPanel.B_SUBMIT),'n_clicks')],
         prevent_initial_call=True,
         )

@@ -51,6 +51,7 @@ class PageConfig():
         self.__security_manager = value
 
 
+NS_RENDER = Namespace("carto","rendering")
 
 
 import json
@@ -85,9 +86,8 @@ FEATURE_ZONE_SENSIBLE_STYLE = {
     "weight": 3,
     "opacity": 0.8
 }
+FEATURE_ZONE_SENSIBLE_OPTION =  dict(style=FEATURE_ZONE_SENSIBLE_STYLE, filter=NS_RENDER('filter_by_month'))
 
-
-NS_RENDER = Namespace("carto","rendering")
 
 
 STATE_PROPS = {
@@ -138,7 +138,7 @@ tile_url = tile_url.replace("CLEF",os.getenv("IGN_KEY"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 
-TILE = dl.TileLayer(url=tile_url,tileSize=tile_size,attribution=attribution)
+TILE = dl.TileLayer(url=tile_url,tileSize=tile_size,attribution=attribution,className='height-100')
 
 
 

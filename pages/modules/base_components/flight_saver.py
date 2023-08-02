@@ -38,8 +38,8 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         if flight == None:
             return True
         dossier = flight.get_attached_dossier()
-        return dossier.get_dossier_state() != DossierState.CONSTRUCTION or self.config.data_manager.is_file_closed(dossier)
-
+        is_hidden = dossier.get_dossier_state() != DossierState.CONSTRUCTION or self.config.data_manager.is_file_closed(dossier)
+        return {'display': 'none'} if is_hidden else {}
     def __fnc_update__(self, data, geojson):  
         from pages.modules.managers import SaveFlight
 
@@ -77,15 +77,17 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         url = packed_actions.returned_value['dossier_url'] if 'dossier_url' in packed_actions.returned_value else None
         return [dcc.Location(href=url, id="finalized", refresh=True) if url != None else no_update,result, False]
 
-    def __get_root_style__(self):
-        return {'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'}
+
     def __get_layout__(self):
         return "Continuer sur Démarches Simplifiées" if self.saving_mode == self.SAVE_CREATE else "Mettre à jour"
+
+    def __get_root_class__(self):
+        return "m-1"
 
     def __init__(self, config: PageConfig, saving_mode: str, map: Carte, incoming_data : IncomingData):
         self.saving_mode = saving_mode
         IBaseComponent.__init__(self, config)
-        TriggerCallbackButton.__init__(self, id=self.get_prefix(), children=self.__get_layout__(), style=self.__get_root_style__())
+        TriggerCallbackButton.__init__(self, id=self.get_prefix(), children=self.__get_layout__(), style=self.__get_root_style__(), class_name=self.__get_root_class__())
         self.map = map
         self.incoming_data = incoming_data
 
@@ -95,7 +97,7 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         ## Init callback
 
         if self.saving_mode == self.SAVE_UPDATE:
-            self.incoming_data.set_callback(self.get_prefix(), self.__fnc_save_init__, 'hidden')
+            self.incoming_data.set_callback(self.get_prefix(), self.__fnc_save_init__, 'style')
 
             self.add_state(self.incoming_data.get_prefix(), 'data')
             self.add_state(self.map.get_comp_edit(), 'geojson')

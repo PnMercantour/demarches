@@ -32,5 +32,10 @@
         "st-link" : "http://localhost:8050/st/{flight_id}?st_token={st_token}",
         "edit-link" : "http://localhost:8050/edit/{flight_id}?security_token={security_token}",
         "admin-link" : "http://localhost:8050/admin/{flight_id}"
-    }
+    },
+    "info-panel-fields":[
+        "long",
+        "nouveauchamp"
+
+    ]
 }

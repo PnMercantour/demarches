@@ -1,15 +1,19 @@
 from dash import html, callback, no_update
 from dash.dependencies import Input
+import dash_bootstrap_components as dbc
 
 from typing import Callable
 
 
 from pages.modules.callbacks import CustomCallback
 
-class TriggerCallbackButton(html.Button, CustomCallback):
+class TriggerCallbackButton(dbc.Button, CustomCallback):
 
     def __init__(self, id: str, **kwargs):
-        html.Button.__init__(self, id=id, n_clicks=0, **kwargs)
+        if 'hidden' in kwargs:
+            kwargs['style'] = {'display': 'none'}
+            del kwargs['hidden']
+        dbc.Button.__init__(self, id=id, n_clicks=0, **kwargs)
         CustomCallback.__init__(self)
 
 

@@ -1,25 +1,21 @@
 from dash import html
+from dash_bootstrap_components import Offcanvas
+import dash_bootstrap_components as dbc
 
 from demarches_simpy import Dossier, DossierState
 
-from carto_editor import PageConfig
+from carto_editor import PageConfig, CONFIG
 
 from pages.modules.interfaces import *
 from pages.modules.callbacks import CustomCallback
 from pages.modules.managers.data_manager import Flight
 
 
-class DossierInfo(html.Div, IBaseComponent):
+class DossierInfo(Offcanvas, IBaseComponent):
     # Style
     
-    # ID
-    F_NUMBER = 'field_number'
-    F_STATE = 'field_state'
-    F_CREATION_DATE = 'field_creation_date'
-    F_CAN_EDIT = 'field_can_edit'
-    F_FLIGHT_UUID = 'field_flight_uuid'
-    F_FLIGHT_START_DZ = 'field_flight_start_dz'
-    F_FLIGHT_END_DZ = 'field_flight_end_dz'
+
+
 
 
     def __fnc_panel_init__(self, data):
@@ -32,33 +28,54 @@ class DossierInfo(html.Div, IBaseComponent):
         return self.__get_layout__(dossier, flight)
 
     def __get_root_style__(self):
-        return {"position": "absolute", "top": "40%", "right": "10px", "zIndex": "1000", "backgroundColor": "white", "borderRadius": "5px", "boxShadow": "2px 2px 2px lightgrey", "padding": "10px","opacity":"0.8"}
+        return {}
 
     def __get_layout__(self, dossier: Dossier = None, flight : Flight = None):
         
         if dossier is None:
             return html.Div('Waiting for data ...')
 
+        from datetime import datetime
+        import locale
+        locale.setlocale(locale.LC_TIME, "fr_FR")
+        ## 2023-08-01 14:21:43.366299
+        date = datetime.strptime(flight.get_creation_date(), "%Y-%m-%d %H:%M:%S.%f")
+        human_readable_format = date.strftime("%B %d, %Y %H:%M:%S")
+        fields = dossier.get_fields()
+
+        # 2023-07-27T11:01:44+02:00
+        deposit_date_str = dossier.get_deposit_date()
+        deposit_date = datetime.strptime(deposit_date_str, "%Y-%m-%dT%H:%M:%S%z")
+        deposit_date_human_readable = deposit_date.strftime("%B %d, %Y %H:%M:%S")
+
 
         return [
-            html.H2("Dossier Info"),
-            html.H3(f"Can edit : {dossier.get_dossier_state() == DossierState.CONSTRUCTION}",id = self.set_id(DossierInfo.F_CAN_EDIT)),
-            html.H3(f"File number : {dossier.get_number()}",id = self.set_id(DossierInfo.F_NUMBER)),
-            html.H3(f"State : {str(dossier.get_dossier_state())}",id = self.set_id(DossierInfo.F_STATE)),
-            html.H2("Flight Info"),
-            html.H3(f"Creation date : {flight.creation_date}",id = self.set_id(DossierInfo.F_CREATION_DATE)),
-            html.H3(f"UUID : {flight.get_id()}",id = self.set_id(DossierInfo.F_FLIGHT_UUID)),
-            html.H3(f"Start DZ : {flight.get_start_dz()}",id = self.set_id(DossierInfo.F_FLIGHT_START_DZ)),
-            html.H3(f"End DZ : {flight.get_end_dz()}",id = self.set_id(DossierInfo.F_FLIGHT_END_DZ)),
+            dbc.Col([
+            html.H2(f"Dossier n°{dossier.get_number()}"),
+            dbc.Row([
+                dbc.Badge(f"{str(dossier.get_dossier_state())}", color="primary", className="mr-1"),
+            ], justify="start", align="start"),
+            html.P(f"Date de dépôt : {deposit_date_human_readable}"),
 
+            
+            html.H2("Informations du vol"),
+            html.P(f"Dernière modification : {human_readable_format}"),
+            html.P(f"Dropzone de départ: {flight.get_start_dz()} "),
+            html.P(f"Dropzone d'arrivé : {flight.get_end_dz()}"),
+            ] + [ html.P(f"{field_label} : {fields[field_label]['stringValue']}") for field_label in self.custom_fields])
         ]
 
         
 
     def __init__(self,pageConfig: PageConfig, incoming_data : CustomCallback):
         IBaseComponent.__init__(self, pageConfig)
-        html.Div.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__())
+        Offcanvas.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__(), is_open=False)
+        
+        self.custom_fields = CONFIG('info-panel-fields', [])
+        
 
         #Create a skeleton for the file info
         incoming_data.set_callback(self.get_prefix(), self.__fnc_panel_init__)
+
+    
 

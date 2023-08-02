@@ -1,4 +1,5 @@
 from dash import Dash, html, dcc
+import dash_bootstrap_components as dbc
 import dash
 
 from flask import Response
@@ -11,20 +12,19 @@ from carto_editor import APP_INFO_BOX, LOADING_BOX, SELECTOR
 
 
 
-app = Dash(__name__, use_pages=True)
+app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'])
 
 
 app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
-    html.H1("Carto Editor", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px'}),
-    dcc.Loading(html.Div('X', hidden=True, id="long-task"), style={"zIndex":"1000", "position":"absolute", "bottom":"0px", "right":"0px", "width":"100%", "height":"100%"}, type="circle"),
+    dbc.NavbarSimple(brand="Carto Editor",color='primary',dark=True),
     SELECTOR,
     LOADING_BOX,
     APP_INFO_BOX,
     # #Main content
     dash.page_container,
     #Footer with white back ground, rounded corners and shadow
-    html.Div("Author : X", style={'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px','margin':'10px'})
+    dbc.Container("Author : X", class_name='h4 bg-primary text-light text-center position-absolute fixed-bottom', fluid=True)
 ])
 
 # # print('Refreshed')

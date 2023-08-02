@@ -3,7 +3,7 @@ from dash import html
 import dash_leaflet as dl
 
 from pages.modules.config import NS_RENDER, PageConfig
-from pages.modules.base_components import IncomingData, Carte, FlightSaver
+from pages.modules.base_components import IncomingData, Carte, FlightSaver, ControlPanel
 from pages.modules.data import APP_INFO_BOX, CACHE
 from pages.modules.managers import DataManager, UserSecurity
 
@@ -24,7 +24,7 @@ map.SetAllFeatures(map)
 
 flight_saver = FlightSaver(config, FlightSaver.SAVE_CREATE,map, url_data)
 
-
+control_panel = ControlPanel(config, map, url_data,True)
 
 
 
@@ -35,4 +35,4 @@ def layout():
         'uuid':None,
     }
     url_data.set_data(data)
-    return html.Div([url_data, flight_saver, map], style={'height': '80vh'})
+    return html.Div([url_data, control_panel, flight_saver, map], style={'height': '80vh'})

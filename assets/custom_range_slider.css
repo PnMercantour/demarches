@@ -1,0 +1,21 @@
+  /* Use the Bootstrap primary color in your CSS */
+.rc-slider-track {
+background-color: var(--bs-primary);
+}
+
+.rc-slider-handle {
+border-color: var(--bs-primary);
+}
+.rc-slider-dot-active{
+border-color: var(--bs-primary);
+}
+.rc-slider-handle-dragging {
+    border-color: var(--bs-primary);
+}
+.rc-slider-handle:hover {
+    border-color: var(--bs-warning);
+}
+.rc-slider-handle-click-focused {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 5px var(--bs-warning);
+}

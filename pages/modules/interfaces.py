@@ -38,8 +38,9 @@ class IBaseComponent():
         pass
 
     def __get_root_style__(self):
-        return {'backgroundColor': 'white', 'borderRadius': '5px', 'boxShadow': '2px 2px 2px lightgrey', 'padding': '10px', 'minWidth': '300px', 'margin': '10px', 'minWidth': '300px' }
-
+        return {}
+    def __get_root_class__(self):
+        return 'm-1 shadow'
     @property
     def config(self) -> PageConfig:
         return self.__pageConfig

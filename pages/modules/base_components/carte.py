@@ -1,6 +1,7 @@
 from __future__ import annotations
 import dash_leaflet as dl
 from dash import html, dcc
+import dash_bootstrap_components as dbc
 from demarches_simpy import DossierState
 
 from carto_editor import PageConfig ,TILE, STATE_PROPS, CACHE,NS_RENDER
@@ -12,13 +13,16 @@ from pages.modules.callbacks import CustomCallback
 class Carte(dl.Map, IBaseComponent):
     # Style
     FILE_STATE_ITEM_STYLE = lambda state : {'color': STATE_PROPS[state]['color'], 'fontWeight': 'bold', 'fontSize': '100%'}
-    FILE_STATE_STYLE = {'position': 'absolute', 'top': '10px', 'right': '10px', 'zIndex': '1000', 'backgroundColor': 'white', 'padding': '10px', 'borderRadius': '5px', 'border': '1px solid black', 'opacity': '0.8'}
-    MONTH_SLIDER_STYLE = {'position': 'absolute', 'bottom': '10px', 'left': '10px', 'zIndex': '1000', 'backgroundColor': 'white', 'padding': '10px', 'borderRadius': '5px', 'border': '1px solid black', 'width': '50vh'}
+    FILE_STATE_CLASS = "position-absolute top-0 end-0 m-2"
     
     ## ID
     FILE_STATE_INFO = "file_state_info"
     EDIT_CONTROL = "edit_control"
-    MONTH_SLIDER = "month_slider"
+
+    FEATURE_DZ = "feature_dz"
+    FEATURE_ZONE_SENSIBLE = "feature_zone_sensible"
+    FEATURE_LIMITES = "feature_limites"
+
     ## EDIT STATE
     EDIT_CONTROL_EDIT_DRAW = {
                 'polyline':{'shapeOptions':{
@@ -62,7 +66,18 @@ class Carte(dl.Map, IBaseComponent):
             return html.Div()
         dossier = flight.get_attached_dossier()
         state = dossier.get_dossier_state().value
-        return [html.H3("Etat du dossier :"),html.Div(STATE_PROPS[state]['text'], style=Carte.FILE_STATE_ITEM_STYLE(state))]
+        return dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.H4(f"Dossier n°{dossier.get_number()}"),
+                            html.Div([
+                            html.P("Etat du dossier : "),
+                            html.Div(STATE_PROPS[state]['text'], style=Carte.FILE_STATE_ITEM_STYLE(state))
+                            ], className='d-flex flex-row'),
+                        ],
+                        style={'textAlign': 'start'}
+                    ),
+                )
 
     def __fnc_center_on_flight__(self, data):
         flight = self.config.data_manager.get_flight_by_uuid(data['uuid'])
@@ -81,8 +96,7 @@ class Carte(dl.Map, IBaseComponent):
         return [
             TILE,
             dl.FeatureGroup([self.comp_edit]),
-            html.Div(id=self.set_id(Carte.FILE_STATE_INFO),style=self.FILE_STATE_STYLE),
-            html.Div([html.Div('Affichage des zones sensibles par mois'),dcc.RangeSlider(0,12,1,value=[6,8],id=self.set_id(Carte.MONTH_SLIDER))], style=self.MONTH_SLIDER_STYLE)
+            html.Div(id=self.set_id(Carte.FILE_STATE_INFO),className=Carte.FILE_STATE_CLASS, style={'zIndex': 1000})    
         ]
         
     def __init__(self,pageConfig : PageConfig, incoming_data : CustomCallback, forceEdit=False):
@@ -99,7 +113,9 @@ class Carte(dl.Map, IBaseComponent):
         self.set_internal_callback()
     
     def addGeoJson(self, geojson,id, **kwargs):
-        self.children.append(dl.GeoJSON(data=geojson, id=self.set_id(id), **kwargs))
+        if not self.get_prefix() in id:
+            id = self.set_id(id)
+        self.children.append(dl.GeoJSON(data=geojson, id=id, **kwargs))
         return self
     def addChildren(self, children):
         self.children.append(children)
@@ -110,36 +126,20 @@ class Carte(dl.Map, IBaseComponent):
 
     @staticmethod
     def SetAllFeatures(map : Carte):
-        from pages.modules.callbacks import SingleInputCallback
-        from carto_editor import FEATURE_LIMITES_STYLE, FEATURE_ZONE_SENSIBLE_STYLE
+        from carto_editor import FEATURE_LIMITES_STYLE, FEATURE_ZONE_SENSIBLE_OPTION
         
-        options_dz = dict(pointToLayer=NS_RENDER('draw_drop_zone'))
-        options_limites = dict(style=FEATURE_LIMITES_STYLE)
-        options_zone_sensible = dict(style=FEATURE_ZONE_SENSIBLE_STYLE, filter=NS_RENDER('filter_by_month'))
-
-
-        
-        def __filter_by_month__(value):
-            min = value[0]
-            max = value[1]
-            
-            return [options_zone_sensible, dict(minMonth=min, maxMonth=max)]
-
-        
+        options_dz = dict(pointToLayer=NS_RENDER('draw_drop_zone'), filter=NS_RENDER('common_filter'))
+        options_limites = dict(style=FEATURE_LIMITES_STYLE,filter=NS_RENDER('common_filter'))
+        options_zone_sensible = FEATURE_ZONE_SENSIBLE_OPTION
 
         ## FETCHING FEATURES
-        
+        zone_sensible = CACHE.get_feature('zone_sensible', map.config.security_manager)
         limites_data = CACHE.get_feature('limites', map.config.security_manager)
         drop_zone_data = CACHE.get_feature('drop_zone', map.config.security_manager)
-        zone_sensible = CACHE.get_feature('zone_sensible', map.config.security_manager)
 
-        map.addGeoJson(zone_sensible,id="comp_zone_sensible", options=options_zone_sensible)
-        map.addGeoJson(limites_data,id="comp_limites",options=options_limites)
-        map.addGeoJson(drop_zone_data,id="comp_drop_zone",options=options_dz, cluster=True,clusterToLayer=NS_RENDER('draw_drop_zone'), superClusterOptions=dict(radius=200))
+        map.addGeoJson(limites_data,id=map.FEATURE_LIMITES,options=options_limites)
+        map.addGeoJson(drop_zone_data,id=map.FEATURE_DZ,options=options_dz, cluster=True,clusterToLayer=NS_RENDER('draw_drop_zone'), superClusterOptions=dict(radius=200))
+        map.addGeoJson(zone_sensible,id=map.FEATURE_ZONE_SENSIBLE, options=options_zone_sensible, hideout=dict(minMonth=6, maxMonth=8))
 
-        ## SETTING UP CALLBACKS
-        month_select = SingleInputCallback(map.get_id(map.MONTH_SLIDER), 'value')
-        month_select.set_callback([map.get_id('comp_zone_sensible'), map.get_id('comp_zone_sensible')], __filter_by_month__, ['options', 'hideout'], prevent_initial_call=False)
-
-
+    
 

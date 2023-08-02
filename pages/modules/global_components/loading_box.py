@@ -5,8 +5,9 @@ from carto_editor import PageConfig
 
 from pages.modules.interfaces import *
 from pages.modules.callbacks import CustomCallback
+import dash_bootstrap_components as dbc
 
-class LoadingBox(dcc.Loading, IBaseComponent, CustomCallback):
+class LoadingBox(dbc.Spinner, IBaseComponent, CustomCallback):
     # Style
 
     # Id
@@ -16,7 +17,15 @@ class LoadingBox(dcc.Loading, IBaseComponent, CustomCallback):
         return [html.Div(id=self.set_id(LoadingBox.TRIGGER_LOADING), hidden=True)]
 
     def __get_root_style__(self):
-        return {"zIndex":"1000", "position":"absolute", "bottom":"0px", "right":"0px", "width":"100%", "height":"100%"}
+        # Put it in bottom left corner
+        return {
+            "zIndex": "2000",
+            'width': '3rem',
+            'height': '3rem',
+        }
+
+    def __get_root_class__(self):
+        return "position-fixed bg-primary fixed-bottom mb-4 ms-4 shadow"
 
     def set_internal_callback(self) -> None:
        pass
@@ -25,7 +34,7 @@ class LoadingBox(dcc.Loading, IBaseComponent, CustomCallback):
     def __init__(self, pageConfig: PageConfig):
         self.pageConfig = pageConfig
         IBaseComponent.__init__(self, pageConfig)
-        dcc.Loading.__init__(self, id=self.get_prefix(), children=self.__get_layout__(), style=self.__get_root_style__(), type='circle')
+        dbc.Spinner.__init__(self, id=self.get_prefix(), children=self.__get_layout__(), spinner_style=self.__get_root_style__(), spinner_class_name=self.__get_root_class__(), color="light", type="border")
 
     def get_trigger_id(self):
         return self.get_id(LoadingBox.TRIGGER_LOADING)

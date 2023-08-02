@@ -76,7 +76,17 @@ window.carto = Object.assign({}, window.carto, {
 
         },  
         filter_by_month: function(feature, context){
-            const {minMonth , maxMonth} = context.props.hideout;
+            if (context.props.hideout == undefined){
+                return true;
+            }
+
+
+            const {minMonth , maxMonth, block_all} = context.props.hideout;
+            
+            if (block_all){
+                return false;
+            }
+            
             month = feature.properties.mois
             //convert month to int
             month = parseInt(month);
@@ -85,8 +95,24 @@ window.carto = Object.assign({}, window.carto, {
             
             
             return is_inside;
-        }
+        },
+        common_filter: function(feature, context){
+            if (context.props.hideout == undefined){
+                return true;
+            }
 
+            const {block_all} = context.props.hideout;
+
+            console.log(block_all + " " + feature.properties.id)
+            
+            if (block_all){
+                return false;
+            }
+
+
+
+            return true;
+        },
     },
 
 });

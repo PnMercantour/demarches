@@ -4,7 +4,7 @@ import dash_leaflet as dl
 
 from pages.modules.data import BuiltInCallbackFnc
 from pages.modules.config import NS_RENDER, PageConfig, arrow_function
-from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel
+from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel, ControlPanel
 from pages.modules.data import APP_INFO_BOX, SELECTOR, DATA_MANAGER
 from pages.modules.managers import AdminSecurity, STSecurity
 
@@ -45,7 +45,7 @@ callbacks = BuiltInCallbackFnc(data_manager)
 url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output(), SELECTOR.get_output()] , callbacks.flight_and_similar_fetch, 'data', prevent_initial_call=True)
 
 
-file_info = DossierInfo(config, incoming_data=url_data)
+control_panel = ControlPanel(config, map, url_data)
 admin_panel = AdminPanel(config, map, url_data)
 
 def layout(uuid=None,security_token=None,st_token=None,**kwargs):
@@ -57,4 +57,4 @@ def layout(uuid=None,security_token=None,st_token=None,**kwargs):
       if st_token != None:
             config.security_manager = st_security_manager
       url_data.set_data(data)
-      return html.Div([url_data, admin_panel,html.Div([map,file_info], style={'display': 'flex', 'flexDirection': 'row', 'height':"60vh"})],style={'height':'80vh'})
+      return html.Div([url_data,control_panel, admin_panel,html.Div([map], style={'display': 'flex', 'flexDirection': 'row', 'height':"60vh"})],style={'height':'80vh'})
