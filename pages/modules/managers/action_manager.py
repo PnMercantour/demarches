@@ -182,8 +182,16 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         dossier = kwargs['dossier'] if 'dossier' in kwargs else None
         dossier = self.dossier if dossier is None else dossier
         dossier_id = dossier.get_id() if dossier is not None else None
-        geom = PolylineToMultistring(self.geojson['features'])
-        geom = json.dumps(geom)
+        feature = self.geojson['features'][0]
+        
+        ## Check if the feature is the homemade type, the wonderful polyline
+        print(feature)
+        if 'type' in feature['properties'] and feature['properties']['type'] == 'polyline':
+            geom = PolylineToMultistring(self.geojson['features'])
+            geom = json.dumps(geom)
+        else:
+            geom = json.dumps(feature['geometry'])
+        print(geom)
 
         resp = self.fetch_sql(sql_request="INSERT INTO survol.flight_history (geom, dossier_id, linked_template) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s, %s) RETURNING uuid::text", request_args=[geom, dossier_id, self.template_uuid], commit=True)
         if self.is_sql_error(resp):
@@ -346,45 +354,131 @@ class ChangeDossierState(IPackedAction):
 
 
 
-class BuildPdf(IPackedAction):
-    def __init__(self, data_manager: DataManager, dossier : Dossier, geojson : dict) -> None:
-        super().__init__(data_manager, security_lvl=SecurityLevel.AUTH)
+class BuildPdf(IPackedAction, SQL_Fetcher):
+    def __init__(self, data_manager: DataManager, dossier : Dossier, flight : Flight) -> None:
+        SQL_Fetcher.__init__(self)
+        IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
+
         self.dossier = dossier
-        self.geojson = geojson
+        self.flight = flight
 
     def precondition(self) -> bool:
-        if self.geojson == None:
-            self.trigger_error("No geojson")
-            return False
+        #Check if flight is valid
+        if self.flight.get_id() == None:
+            return self.trigger_error("Invalid flight")
 
-        if self.geojson['type'] != 'FeatureCollection':
-            self.trigger_error("Wrong geojson type")
-            return False
-        
-        if 'features' in self.geojson and len(self.geojson['features']) == 0:
-            self.trigger_error("Empty geojson")
-            return False
 
         
         
         return True
 
-    def __build_pdf__(self, dossier : Dossier, geojson : dict) -> str:
-        import time
+    def __build_pdf__(self, dossier : Dossier) -> str:
+
         from print_my_report import DisplayObj, CartoPrinter
         from PIL import Image
-        title = DisplayObj('Plan de vol', f"Plan de vol du dossier n°{dossier.get_number()}")
-        info1 = DisplayObj('Dossier Info', str(dossier))
+        import json
+        
+        ## Fetching data
+        flight = self.flight.get_last_flight()
+        resp = self.fetch_sql(sql_request='SELECT flight, dz, limites FROM survol.build_map_json(%s)', request_args=[flight.get_id()])
+        if self.is_sql_error(resp):
+            return self.trigger_error(resp['message'])
+        geojson = resp[0][0]
+        dz = resp[0][1]
+        limites = resp[0][2]
+        geojsons = [
+            {
+                "geojson": json.dumps(geojson),
+                "ls":'--',
+                "lw":2
+            },
+            {
+                "geojson": json.dumps(limites),
+                "facecolor": "red",
+                "alpha":0.07,
+                "hatch":'///',
+                "edgecolor": "red",
+                "lw":2
+            },
+            {
+                "geojson": json.dumps(dz),
+                "hatch":'///',
+                "marker":'o',
+                "markersize":100,
+                "edgecolor": "k",
+                "zorder":10,
+            }
+        ]
 
-        printer = CartoPrinter(geojson, title, [info1],logo=Image.open("./assets/logo.png"))
-        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf")
+
+        legends = [
+            {
+                "type" : "Patch",
+                "label": "Limites du parc",
+                "facecolor": "red",
+                "edgecolor": "red",
+                "alpha":0.25,
+                "hatch":'///',
+                "lw":2
+            },
+            {
+                "type" : "Line2D",
+                "label" : "Vol hors coeur",
+                'color':'g',
+                "ls":'--',
+            },
+            {
+                "type" : "Line2D",
+                "label" : "Zone en coeur",
+                'color':'r',
+                "ls":'--',
+            },
+            {
+                "type" : "Line2D",
+                "label" : "Drop zone de départ",
+                'color':'w',
+                "marker":'o',
+                "markerfacecolor":'g',
+                "markersize":10,
+            },
+            {
+                "type" : "Line2D",
+                "label" : "Drop zone d'arrivée'",
+                'color':'w',
+                "marker":'o',
+                "markerfacecolor":'r',
+                "markersize":10,
+            }
+                    
+        ]
+
+        ## Set DisplayObj
+        title = DisplayObj('Plan de vol', f"Dossier n°{dossier.get_number()}")
+
+        items= []
+        s_dropzone = DisplayObj("Drop zone de départ", flight.get_start_dz())
+        e_dropzone = DisplayObj("Drop zone d'arrivée", flight.get_end_dz())
+        items.append(s_dropzone)
+        items.append(e_dropzone)
+
+        dossier_fields = dossier.get_fields()
+        fields = CONFIG('pdf-fields',[])
+        for field in fields:
+            if field in dossier_fields:
+                items.append(DisplayObj(field, dossier_fields[field]['stringValue']))
+
+
+
+
+        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map='raster/scan25.tif')
+        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema='./pdf-templates/vol_mercantour')
 
 
     def perform(self, **kwargs) -> any:
         from threading import Thread
         file_path = f"http://localhost:8050/pdf/flight_{self.dossier.get_id()}.pdf"
 
-        thread = Thread(target=self.__build_pdf__, args=(self.dossier, self.geojson))
+        thread = Thread(target=self.__build_pdf__, args=(self.dossier,))
         thread.start()
 
         self.passed_kwargs  = {

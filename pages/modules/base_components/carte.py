@@ -85,7 +85,7 @@ class Carte(dl.Map, IBaseComponent):
             return [self.CENTER, self.ZOOM]
         geojson = flight.get_geojson()
         #Inverse lat long
-        return [[geojson["geometry"]["coordinates"][0][1], geojson["geometry"]["coordinates"][0][0]], 12]
+        return [[geojson["geometry"]["coordinates"][0][0][1], geojson["geometry"]["coordinates"][0][0][0]], 12]
 
 
     def __get_root_style__(self):
@@ -138,7 +138,7 @@ class Carte(dl.Map, IBaseComponent):
         drop_zone_data = CACHE.get_feature('drop_zone', map.config.security_manager)
 
         map.addGeoJson(limites_data,id=map.FEATURE_LIMITES,options=options_limites)
-        map.addGeoJson(drop_zone_data,id=map.FEATURE_DZ,options=options_dz, cluster=True,clusterToLayer=NS_RENDER('draw_drop_zone'), superClusterOptions=dict(radius=200))
+        map.addGeoJson(drop_zone_data,id=map.FEATURE_DZ,options=options_dz, cluster=True,clusterToLayer=NS_RENDER('draw_cluster_drop_zone'), superClusterOptions=dict(radius=200))
         map.addGeoJson(zone_sensible,id=map.FEATURE_ZONE_SENSIBLE, options=options_zone_sensible, hideout=dict(minMonth=6, maxMonth=8))
 
     

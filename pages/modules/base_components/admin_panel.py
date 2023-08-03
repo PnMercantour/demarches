@@ -153,7 +153,7 @@ class AdminPanel(html.Div, IBaseComponent):
             if not self.config.security_manager.is_logged:
                 return [{"message" : "Invalid credentials", 'type':"error"}, False]
 
-            packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid})
+            packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid}, verbose=True)
 
             # Common Actions
             saving_flight = SaveFlight(self.config.data_manager, geojson, dossier)
@@ -163,7 +163,7 @@ class AdminPanel(html.Div, IBaseComponent):
             delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
             add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
-            build_pdf = BuildPdf(self.config.data_manager, dossier, geojson if new_flight else Flight.build_complete_geojson(flight))
+            build_pdf = BuildPdf(self.config.data_manager, dossier, flight)
             send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis, pdf_url=pdf_url, attestation_url=attestation_url )
             save_new_template = SaveNewTemplate(self.config.data_manager)
 
@@ -240,7 +240,7 @@ class AdminPanel(html.Div, IBaseComponent):
                     dbc.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), className=self.BUTTON_CLASS, color="danger"),
                     dbc.Button("Attestation", className=self.BUTTON_CLASS+' btn-primary', style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), href=attestation_url),
                 ], className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
-                test := TriggerCallbackButton(self.set_id('test'), children='test', hidden=True)
+                test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
                 dbc.ModalHeader(dbc.ModalTitle("Prescription ?" if self.is_st else "Commentaire ?")),
@@ -267,10 +267,10 @@ class AdminPanel(html.Div, IBaseComponent):
         def __test__(data):
             uuid = data['uuid']
             flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
-            from pages.modules.managers.action_manager import SaveNewTemplate
+            from pages.modules.managers.action_manager import BuildPdf
 
-            save = SaveNewTemplate(self.config.data_manager)
-            return save.perform(uuid=flight.get_id()).result
+            pdf = BuildPdf(self.config.data_manager, flight.get_attached_dossier(), flight)
+            return pdf.perform(uuid=flight.get_id()).result
 
         
         test.add_state(self.incoming_data.get_prefix() , "data")

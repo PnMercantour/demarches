@@ -7,7 +7,12 @@ window.carto = Object.assign({}, window.carto, {
     rendering: {  
         draw_drop_zone: function (feature, latlng)
         {
-            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/50/region-code.png`, iconSize: [50, 50]});
+            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/50/region-code.png`, iconSize: [35, 35]});
+            return L.marker(latlng, {icon: flag});
+        },
+        draw_cluster_drop_zone: function (feature, latlng)
+        {
+            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/100/full-stop.png`, iconSize: [35, 35]});
             return L.marker(latlng, {icon: flag});
         },
         flight_style: function(feature, context){

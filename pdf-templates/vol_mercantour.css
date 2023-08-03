@@ -1,0 +1,87 @@
+:root{
+    --info-box-width: 50mm;
+    --doc-height: 210mm;
+    --doc-width: 297mm;
+    --content-width: 247mm;
+    --content-height: 180mm;
+    --color-info-box: #ffffff;
+    --color-header: #ffffff;
+}
+
+@page {
+    size: A4 landscape;
+    margin: 0; /* Ajout d'une marge nulle pour éviter les marges par défaut du navigateur */
+}
+
+body {
+    margin: 0; /* Ajout d'une marge nulle pour éviter les marges par défaut du navigateur */
+}
+
+.content {
+    display: flex;
+    width: calc(var(--doc-width) - var(--info-box-width));
+    height: var(--doc-height);
+    flex-direction: row;
+}
+
+.carto {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.carto-header {
+    display: flex;
+    height: calc(var(--doc-height) - var(--content-height));
+    width: var(--content-width);
+}
+
+.carto-logo {
+    border: solid 1px #42b029;
+    flex: 1;
+}
+
+.carto-title {
+    flex: 5;
+    background-color: var(--color-header);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    padding: 2mm;
+}
+
+.carto-content {
+    height: var(--content-height);
+    width: var(--content-width);
+    object-fit: contain;
+}
+
+.info-box {
+    width: var(--info-box-width);
+    height: var(--doc-height);
+    max-width: var(--info-box-width);
+    display: flex;
+    flex-direction: column;
+
+}
+.info-box-item{
+    margin: 2mm;
+    padding: 2mm;
+    border-radius: 2px;
+    border: 1px solid black;
+    box-shadow: 1px 1px 1px 1px #888888;
+}
+
+#content {
+    width: 100%;
+    height: 100%;
+    object-fit: contain
+}
+
+#logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain
+}
