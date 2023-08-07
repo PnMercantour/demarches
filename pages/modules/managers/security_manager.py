@@ -95,7 +95,7 @@ class UserSecurity(ISecurityManager):
 
         token_field = annotations[field_label]
 
-        self.logged = token_field["stringValue"] != security_token
+        self.logged = token_field["stringValue"] == security_token
         return self.logged
 
 

@@ -89,7 +89,7 @@ class Carte(dl.Map, IBaseComponent):
 
 
     def __get_root_style__(self):
-        return {'width': '100%', 'height': '100%', 'margin': "auto", "display": "block"}
+        return {'width': '100%', 'height': '80%'}
 
     def __get_layout__(self):
         self.comp_edit = dl.EditControl(draw=self.EDIT_CONTROL_EDIT_DRAW, id=self.set_id(Carte.EDIT_CONTROL))

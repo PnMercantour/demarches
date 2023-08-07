@@ -1,7 +1,7 @@
 import dash
 from dash import html
 import dash_leaflet as dl
-from pages.modules.config import NS_RENDER, PageConfig, arrow_function
+from pages.modules.config import NS_RENDER, PageConfig, arrow_function, CONTENT_STYLE
 from pages.modules.base_components import IncomingData, Carte, FlightSaver, ControlPanel
 from pages.modules.data import APP_INFO_BOX, BuiltInCallbackFnc
 from pages.modules.managers import DataManager, UserSecurity
@@ -39,6 +39,7 @@ def layout(uuid=None,security_token=None):
             'uuid':uuid,
             'security_token':security_token
       }
+      print(security_token)
       url_data.set_data(data)
-      return html.Div([url_data, control_panel,flight_saver, html.Div([map], style={'display': 'flex', 'flexDirection': 'row', 'height': '80vh'})])
+      return html.Div([url_data, control_panel,flight_saver, map], style=CONTENT_STYLE)
 

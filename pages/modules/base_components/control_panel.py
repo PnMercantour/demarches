@@ -104,7 +104,9 @@ class ControlPanel(dbc.Container, IBaseComponent):
         map_options = SingleInputCallback(self.get_id(self.MAP_OPTIONS), 'value')
         map_options.add_state(map_id(map.FEATURE_ZONE_SENSIBLE),'hideout')
         map_options.set_callback([map_id(map.FEATURE_DZ), Output(map_id(map.FEATURE_ZONE_SENSIBLE), 'hideout',allow_duplicate=True), map_id(map.FEATURE_LIMITES)], __map_options__, 'hideout', prevent_initial_call=True)
-        
+    
+    def __get_root_class__(self):
+        return 'm-2'
 
     def __init__(self, config: PageConfig, map: Carte, incoming_data: IncomingData, disable_info_panel: bool = False):
         self.map = map

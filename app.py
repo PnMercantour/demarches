@@ -17,14 +17,15 @@ app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LUMEN, dbc
 
 app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
+    html.Div([
     dbc.NavbarSimple(brand="Carto Editor",color='primary',dark=True),
     SELECTOR,
     LOADING_BOX,
-    APP_INFO_BOX,
+    APP_INFO_BOX],className='shadow-sm rounded',style={'height':'8vh'}),
     # #Main content
-    dash.page_container,
+    html.Div(id='page-content',children=dash.page_container),
     #Footer with white back ground, rounded corners and shadow
-    dbc.Container("Author : X", class_name='h4 bg-primary text-light text-center position-absolute fixed-bottom', fluid=True)
+    dbc.Container("Author : X", class_name='h4 bg-primary text-light text-center', style={'height':'5vh'},fluid=True)
 ])
 
 # # print('Refreshed')

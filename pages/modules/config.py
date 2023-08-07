@@ -72,6 +72,14 @@ def CONFIG(path,default : str ="")->str:
 
     return value
 
+
+
+## APP STYLE
+
+CONTENT_STYLE = {
+    "height": "85vh"
+}
+
 ## GLOBAL STYLE CONFIGURATION
 
 FEATURE_LIMITES_STYLE = {
@@ -119,8 +127,6 @@ STATE_PROPS = {
 }
 
 
-
-## MAP CONFIGURATION
 
 
 

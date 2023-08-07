@@ -47,7 +47,7 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         security_token = data['security_token']
 
         self.config.security_manager.login({'uuid': uuid, 'security_token': security_token})
-        if not self.config.security_manager.is_logged:
+        if not self.config.security_manager.is_logged():
             return [{'message' : 'Invalid credentials','type':'error'}, False]
 
         flight = self.config.data_manager.get_flight_by_uuid(uuid)
@@ -57,7 +57,6 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
 
         dossier = flight.get_attached_dossier().force_fetch()
 
-        
         save_flight = SaveFlight(self.config.data_manager, geojson, dossier)
         return [self.config.security_manager.perform_action(save_flight),False]
 

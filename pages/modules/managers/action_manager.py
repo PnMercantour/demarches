@@ -64,9 +64,7 @@ class PackedActions(IAction):
         self.returned_value = previous_kwargs
         self.result = tmp[-1].result
         return self
-        
-        
-        
+            
 ## Actions
 
 class FeatureFetching(IAction, SQL_Fetcher):
@@ -320,8 +318,6 @@ class DeleteSTToken(IPackedAction, SQL_Fetcher):
 
         return self.trigger_success("Token deleted", **kwargs)
 
-
-
 class ChangeDossierState(IPackedAction):
     def __init__(self, data_manager: DataManager, dossier : Dossier, new_state : DossierState) -> None:
         super().__init__(data_manager, security_lvl=SecurityLevel.AUTH)
@@ -349,10 +345,6 @@ class ChangeDossierState(IPackedAction):
             return self
 
         return self.trigger_success("State changed", **kwargs)
-
-
-
-
 
 class BuildPdf(IPackedAction, SQL_Fetcher):
     def __init__(self, data_manager: DataManager, dossier : Dossier, flight : Flight) -> None:
@@ -470,13 +462,13 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
 
 
 
-        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map='raster/scan25.tif')
+        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=CONFIG('general/base-map-path','raster/scan25.tif'))
         printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema='./pdf-templates/vol_mercantour')
 
 
     def perform(self, **kwargs) -> any:
         from threading import Thread
-        file_path = f"http://localhost:8050/pdf/flight_{self.dossier.get_id()}.pdf"
+        file_path = CONFIG('url-template/pdf-path', default='./pdf/{dossier_id}.pdf').format(dossier_id=self.dossier.get_id())
 
         thread = Thread(target=self.__build_pdf__, args=(self.dossier,))
         thread.start()

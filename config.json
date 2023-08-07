@@ -1,6 +1,7 @@
 {
     "general" : {
-        "demarche-number": 77818
+        "demarche-number": 77818,
+        "base-map-path" : "./raster/scan25.tif"
     },
     "email-templates": {
         "st-requesting": {
@@ -29,9 +30,9 @@
     },
     "url-template":{
         "pdf-path" : "http://localhost:8050/pdf/flight_{dossier_id}.pdf",
-        "st-link" : "http://localhost:8050/st/{flight_id}?st_token={st_token}",
-        "edit-link" : "http://localhost:8050/edit/{flight_id}?security_token={security_token}",
-        "admin-link" : "http://localhost:8050/admin/{flight_id}"
+        "st-link" : "http://localhost:8050/admin?uuid={flight_id}&st_token={st_token}",
+        "edit-link" : "http://localhost:8050/edit?uuid={flight_id}&security_token={security_token}",
+        "admin-link" : "http://localhost:8050/admin?uuid={flight_id}"
     },
     "info-panel-fields":[
         "long",
