@@ -150,7 +150,7 @@ class AdminPanel(html.Div, IBaseComponent):
             pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
             attestation_url=lambda dossier : dossier.force_fetch().get_data()['dossier']['attestation']['url'] if state == DossierState.ACCEPTE else ""
             self.process_connection(data, email, password)
-            if not self.config.security_manager.is_logged:
+            if not self.config.security_manager.is_logged():
                 return [{"message" : "Invalid credentials", 'type':"error"}, False]
 
             packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid}, verbose=True)
@@ -213,6 +213,7 @@ class AdminPanel(html.Div, IBaseComponent):
         disabled_submit = True
         disabled_block = True
         attestation_url = ""
+
 
         is_hidden = lambda x : "d-none" if x else ""
         ## CHECK THE FLIGHT VALIDITY

@@ -47,7 +47,7 @@ class ControlPanel(dbc.Container, IBaseComponent):
                         )
                     ])
                 ], width=4),
-                dbc.Col([html.Div('Affichage des zones sensibles par mois'),dcc.RangeSlider(0,12,1,value=[6,8],id=self.set_id(ControlPanel.MONTH_SLIDER))
+                dbc.Col([html.Div('Affichage des zones sensibles par mois'),dcc.RangeSlider(1,12,1,value=[6,8],id=self.set_id(ControlPanel.MONTH_SLIDER))
                 ],width=4)
             ])
 

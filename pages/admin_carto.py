@@ -48,13 +48,13 @@ url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output(), SELECTOR
 control_panel = ControlPanel(config, map, url_data)
 admin_panel = AdminPanel(config, map, url_data)
 
-def layout(uuid=None,security_token=None,st_token=None,**kwargs):
+def layout(uuid=None,st_token=None,**kwargs):
       data = {
             'uuid':uuid,
-            'security_token':security_token,
             'st_token':st_token
       }
       if st_token != None:
+            print("ST TOKEN")
             config.security_manager = st_security_manager
       url_data.set_data(data)
       return html.Div([url_data,control_panel, admin_panel, map], style=CONTENT_STYLE)
