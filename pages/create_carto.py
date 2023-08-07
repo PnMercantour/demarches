@@ -1,10 +1,8 @@
 import dash
 from dash import html
-import dash_leaflet as dl
 
-from pages.modules.config import NS_RENDER, PageConfig, CONTENT_STYLE
+from pages.modules.config import PageConfig, CONTENT_STYLE
 from pages.modules.base_components import IncomingData, Carte, FlightSaver, ControlPanel
-from pages.modules.data import APP_INFO_BOX, CACHE
 from pages.modules.managers import DataManager, UserSecurity
 
 dash.register_page(__name__, path='/',path_template='/')
