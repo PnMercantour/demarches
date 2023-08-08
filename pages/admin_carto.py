@@ -4,19 +4,17 @@ import dash_leaflet as dl
 
 from pages.modules.data import BuiltInCallbackFnc
 from pages.modules.config import NS_RENDER, PageConfig, arrow_function, CONTENT_STYLE
-from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel, ControlPanel
+from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel, ControlPanel, Manager
 from pages.modules.data import APP_INFO_BOX, SELECTOR, DATA_MANAGER
 from pages.modules.managers import AdminSecurity, STSecurity
 
 dash.register_page(__name__, path='/admin',path_template='/admin')
 
 ## MANAGERS
-data_manager = DATA_MANAGER
-admin_security_manager = AdminSecurity(data_manager)
-st_security_manager = STSecurity(data_manager)
+manager = Manager("admin", DATA_MANAGER, AdminSecurity(DATA_MANAGER))
 
-
-config = PageConfig("admin", data_manager, admin_security_manager)
+config = manager.config
+data_manager = manager.data_manager
 url_data = IncomingData(config)
 
 
@@ -48,13 +46,13 @@ url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output(), SELECTOR
 control_panel = ControlPanel(config, map, url_data)
 admin_panel = AdminPanel(config, map, url_data)
 
-def layout(uuid=None,st_token=None,**kwargs):
-      data = {
-            'uuid':uuid,
-            'st_token':st_token
-      }
-      if st_token != None:
-            print("ST TOKEN")
-            config.security_manager = st_security_manager
-      url_data.set_data(data)
-      return html.Div([url_data,control_panel, admin_panel, map], style=CONTENT_STYLE)
+def layout(**kwargs):
+      print(kwargs)
+      def build_security(data_manager):
+            if 'st_token' in kwargs:
+                  return STSecurity(data_manager)
+            else:
+                  return AdminSecurity(data_manager)
+      manager.security_manager = build_security(DATA_MANAGER)
+      url_data.set_data(**kwargs)
+      return html.Div([manager, url_data,control_panel, admin_panel, map], style=CONTENT_STYLE)

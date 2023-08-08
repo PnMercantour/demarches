@@ -60,11 +60,14 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         save_flight = SaveFlight(self.config.data_manager, geojson, dossier)
         return [self.config.security_manager.perform_action(save_flight),False]
 
-    def __fnc_create(self, geojson):
+    def __fnc_create(self, geojson, data):
         from pages.modules.managers import CreatePrefilledDossier, SaveFlight, UpdateFlightDossier, PackedActions
         from dash import dcc, no_update
+        min_month = data['min_month'] if 'min_month' in data else 6
+        max_month = data['max_month'] if 'max_month' in data else 8
+
         save_flight = SaveFlight(self.config.data_manager, geojson)
-        create_dossier = CreatePrefilledDossier(self.config.data_manager)
+        create_dossier = CreatePrefilledDossier(self.config.data_manager, min_month=min_month, max_month=max_month)
         update_flight = UpdateFlightDossier(self.config.data_manager)
 
         packed_actions = PackedActions(self.config.data_manager,{}, SecurityLevel.NO_AUTH)
@@ -103,4 +106,5 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
             self.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()], self.__fnc_update__, 'data', prevent_initial_call=True)
         elif self.saving_mode == self.SAVE_CREATE:
             self.add_state(self.map.get_comp_edit(), 'geojson')
+            self.add_state(self.incoming_data.get_prefix(), 'data')
             self.set_callback([self.get_prefix(), APP_INFO_BOX.get_output(), LOADING_BOX.get_output()], self.__fnc_create, 'children', prevent_initial_call=True)

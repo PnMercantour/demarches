@@ -2,6 +2,6 @@ Le dossier n°{dossier_number} a été refusé.
 
     Vous trouverez ci-joint le plan de vol, ainsi que l'attestation téléchargeable.
 
-    Remarque envoyé au pétitionnaire : {remarque}
+    Remarque envoyé au pétitionnaire : {avis}
 
     [Ce message est généré automatiquement, merci de ne pas y répondre]

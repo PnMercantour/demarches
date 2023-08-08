@@ -2,18 +2,19 @@ import dash
 from dash import html
 import dash_leaflet as dl
 
-from carto_editor import NS_RENDER, PageConfig, BuiltInCallbackFnc, arrow_function, CONTENT_STYLE
-from pages.modules.base_components import IncomingData, Carte, ControlPanel
-from pages.modules.data import APP_INFO_BOX, CACHE
-from pages.modules.managers import DataManager, UserSecurity
+from carto_editor import NS_RENDER, BuiltInCallbackFnc, arrow_function, CONTENT_STYLE, DATA_MANAGER
+from pages.modules.base_components import IncomingData, Carte, ControlPanel, Manager
+from pages.modules.data import APP_INFO_BOX
+from pages.modules.managers import UserSecurity
 
 dash.register_page(__name__, path='/view',path_template='/')
 
 ## MANAGERS
-data_manager = DataManager()
-security_manager = UserSecurity(data_manager)
+manager = Manager('view', DATA_MANAGER, UserSecurity(DATA_MANAGER))
 
-config = PageConfig("view", data_manager, security_manager)
+
+data_manager = manager.data_manager
+config = manager.config
 
 url_data = IncomingData(config)
 
@@ -34,9 +35,6 @@ url_data.set_callback([map.get_id('flight'), APP_INFO_BOX.get_output()], callbac
 control_panel = ControlPanel(config, map, url_data,True)
 
 
-def layout(uuid:str = None):
-    data = {
-        'uuid':uuid,
-    }
-    url_data.set_data(data)
-    return html.Div([url_data, control_panel,map], style=CONTENT_STYLE)
+def layout(**kwargs):
+    url_data.set_data(**kwargs)
+    return html.Div([manager, url_data, control_panel,map], style=CONTENT_STYLE)

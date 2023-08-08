@@ -20,7 +20,6 @@ class AdminSecurity(ISecurityManager):
     def login(self, data) -> bool:
         if not 'email' in data or not 'password' in data:
             return False
-
         email = data['email']
         password = data['password']
         flight_uuid = data['uuid']
@@ -28,7 +27,6 @@ class AdminSecurity(ISecurityManager):
         dossier_ctx.get_attached_instructeurs_info()
         dossier_ctx.force_fetch()
         instructeurs = dossier_ctx.get_attached_instructeurs_info()
-
         for instructeur in instructeurs:
             if instructeur['email'] == email and instructeur['id'] == password:
                 self.logged = True
@@ -44,6 +42,7 @@ class STSecurity(ISecurityManager, SQL_Fetcher):
     def login(self, data):
         if not 'st_token' in data and not 'uuid' in data:
             return False
+
 
         uuid = data['uuid']
         st_token = data['st_token']

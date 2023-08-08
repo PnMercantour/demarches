@@ -1,4 +1,4 @@
-from dash import no_update, callback, html, dcc
+from dash import no_update, callback, html, dcc, callback_context
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -21,6 +21,7 @@ class ControlPanel(dbc.Container, IBaseComponent):
         
 
     def __get_layout__(self):
+
         if not self.disable_info_panel:
             self.dossier_info = DossierInfo(self.config, self.incoming_data)
         else:
@@ -77,16 +78,29 @@ class ControlPanel(dbc.Container, IBaseComponent):
 
         from carto_editor import FEATURE_ZONE_SENSIBLE_OPTION
 
-        def __filter_by_month__(value):
+
+        @callback(
+            [Output(map_id(map.FEATURE_ZONE_SENSIBLE), 'options'),
+            Output(map_id(map.FEATURE_ZONE_SENSIBLE), 'hideout'),
+            Output(self.incoming_data.get_prefix(), 'data'),
+            Output(self.get_id(self.MONTH_SLIDER), 'value')
+            ],
+            Input(self.get_id(self.MONTH_SLIDER), 'value'),
+            State(self.incoming_data.get_prefix(), 'data'),
+        )
+        def __filter_by_month__(value,data):
+            trigger_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+
             min = value[0]
             max = value[1]
-            
-            return [FEATURE_ZONE_SENSIBLE_OPTION, dict(minMonth=min, maxMonth=max)]
-
-
-        month_select = SingleInputCallback(self.get_id(self.MONTH_SLIDER), 'value')
-        month_select.set_callback([map_id(map.FEATURE_ZONE_SENSIBLE), Output(map_id(map.FEATURE_ZONE_SENSIBLE), 'hideout',allow_duplicate=True)], __filter_by_month__, ['options', 'hideout'], prevent_initial_call=True)
-
+            print("trigger id "+trigger_id+" data " + str(data))
+            if trigger_id == self.get_id(self.MONTH_SLIDER):
+                data['min_month'] = min
+                data['max_month'] = max
+            else:
+                min = data['min_month'] if 'min_month' in data else min
+                max = data['max_month'] if 'max_month' in data else max
+            return [FEATURE_ZONE_SENSIBLE_OPTION, dict(minMonth=min, maxMonth=max),data, [int(min),int(max)]]
       
         ## MAP OPTIONS CONTROL CALLBACKS
         def __map_options__(values, zs_dict):
@@ -105,6 +119,8 @@ class ControlPanel(dbc.Container, IBaseComponent):
         map_options.add_state(map_id(map.FEATURE_ZONE_SENSIBLE),'hideout')
         map_options.set_callback([map_id(map.FEATURE_DZ), Output(map_id(map.FEATURE_ZONE_SENSIBLE), 'hideout',allow_duplicate=True), map_id(map.FEATURE_LIMITES)], __map_options__, 'hideout', prevent_initial_call=True)
     
+
+
     def __get_root_class__(self):
         return 'm-2'
 
@@ -115,8 +131,6 @@ class ControlPanel(dbc.Container, IBaseComponent):
         IBaseComponent.__init__(self, config)
         dbc.Container.__init__(self, id=self.get_prefix(), fluid=True, children=self.__get_layout__(), style=self.__get_root_style__(), class_name=self.__get_root_class__())
 
-
         self.set_internal_callback()
-
 
         

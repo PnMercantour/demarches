@@ -63,21 +63,23 @@ class AdminPanel(html.Div, IBaseComponent):
 
 
     def __fnc_init__(self, data):
-        self.is_st = data['st_token'] != None
+        self.is_st = 'st_token' in data and data['st_token'] != None
         return self.__get_layout__(data['uuid'])
 
 
-    ## REDIRECTION FNC
-    def __fnc_st_request_trigger__(self, packed_actions, avis, uuid, dossier):
-        from pages.modules.managers import SendSTRequest, GenerateSTToken
+    ## FONCTION HANDLING THE PRESCRIPTION REQUEST FOR THE ST
+    def __fnc_st_request_trigger__(self, data, packed_actions, avis, uuid, dossier):
+        from pages.modules.managers import GenerateSTToken, SendMailTo
         from pages.modules.config import CONFIG
 
 
         #Get the correct message skeleton from config
-
+        min_month = data['min_month'] if 'min_month' in data else 6
+        max_month = data['max_month'] if 'max_month' in data else 8
         skeleton = CONFIG("email-templates/st-requesting")
+        url = CONFIG('url-template/st-link')
 
-        st_request = SendSTRequest(self.config.data_manager,skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), avis)
+        st_request = SendMailTo(self.config.data_manager,'contact@rodriguez-esteban.com', skeleton['subject'], open(skeleton['body-path'],'r', encoding='utf-8').read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
         st_token = GenerateSTToken(self.config.data_manager, dossier)
         
 
@@ -88,14 +90,17 @@ class AdminPanel(html.Div, IBaseComponent):
 
         return [self.config.security_manager.perform_action(packed_actions),True]
 
-    def __fnc_st_prescription_trigger__(self, packed_actions, avis, uuid, dossier):
-        from pages.modules.managers import SendInstruct, SetAnnotation
+    ## FONCTION HANDLING THE PRESCRIPTION SEND BY THE ST
+    def __fnc_st_prescription_trigger__(self, data, packed_actions, avis, uuid, dossier):
+        from pages.modules.managers import SendMailTo, SetAnnotation
         from pages.modules.config import CONFIG
 
         #Get the correct message skeleton from config
         skeleton = CONFIG("email-templates/st-prescription")
-
-        st_prescription = SendInstruct(self.config.data_manager,skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), avis)
+        min_month = data['min_month'] if 'min_month' in data else 6
+        max_month = data['max_month'] if 'max_month' in data else 8
+        url =  CONFIG('url-template/admin-link').format(flight_id=uuid,min_month=min_month,max_month=max_month)
+        st_prescription = SendMailTo(self.config.data_manager,dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), prescription=avis,url=url)
         set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/st-prescription"))
 
         packed_actions.add_action(set_annotation)
@@ -103,6 +108,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
         return [self.config.security_manager.perform_action(packed_actions),True]
     
+    ## FUNCTION WHICH TAKE THE SAME BUTTON INPUT AND REDIRECT IF IT'S THE ST OR THE INSTRUCT WHICH TRIGGERED THE ACTION
     def __fnc_st_redirection_trigger__(self, data, geojson, email, password, avis, selected):
         from pages.modules.managers import PackedActions, SaveFlight
 
@@ -112,7 +118,7 @@ class AdminPanel(html.Div, IBaseComponent):
         st_token = data['st_token']
 
         self.process_connection(data, email, password)
-        if not self.config.security_manager.is_logged:
+        if not self.config.security_manager.is_logged():
             return [{"message" : "Invalid credentials", 'type':"error"}, False]
         
         packed_actions = PackedActions(self.config.data_manager, start_values={'uuid':uuid, 'dossier':dossier}, verbose=True)
@@ -131,16 +137,16 @@ class AdminPanel(html.Div, IBaseComponent):
 
 
         if st_token is None:
-            return self.__fnc_st_request_trigger__(packed_actions, avis, uuid, dossier)
+            return self.__fnc_st_request_trigger__(data, packed_actions, avis, uuid, dossier)
         else:
-            return self.__fnc_st_prescription_trigger__(packed_actions, avis, uuid, dossier)
-
+            return self.__fnc_st_prescription_trigger__(data, packed_actions, avis, uuid, dossier)
+    ### RETURN THE TMP FUNCTION AS THE CALLBACK WHICH WILL BE BUILT IN FUNCTION OF THE STATE (AVOID REDUNDANCY)
     def build_fnc_finalized_state(self, state : DossierState):
         if state != DossierState.ACCEPTE and state != DossierState.REFUSE and state != DossierState.SANS_SUITE:
             state = DossierState.REFUSE
         '''Return the custom function based on the state'''
         def __tmp__(self, data, geojson, email, password, avis, selected):
-            from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendInstruct, BuildPdf, DeleteSTToken, ChangeDossierState, SaveNewTemplate
+            from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendMailTo, BuildPdf, DeleteSTToken, ChangeDossierState, SaveNewTemplate
             from pages.modules.config import CONFIG
 
             uuid = data['uuid']
@@ -150,6 +156,7 @@ class AdminPanel(html.Div, IBaseComponent):
             pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
             attestation_url=lambda dossier : dossier.force_fetch().get_data()['dossier']['attestation']['url'] if state == DossierState.ACCEPTE else ""
             self.process_connection(data, email, password)
+            print(type(self.config.security_manager))
             if not self.config.security_manager.is_logged():
                 return [{"message" : "Invalid credentials", 'type':"error"}, False]
 
@@ -158,13 +165,14 @@ class AdminPanel(html.Div, IBaseComponent):
             # Common Actions
             saving_flight = SaveFlight(self.config.data_manager, geojson, dossier)
 
+            ## Check if the geojson fetched by the edit component is valid, if not, it means there is no new flight edited by the user
             new_flight = saving_flight.precondition()
 
             delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
             add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
             build_pdf = BuildPdf(self.config.data_manager, dossier, flight)
-            send_instruct = SendInstruct(self.config.data_manager, skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis, pdf_url=pdf_url, attestation_url=attestation_url )
+            send_instruct = SendMailTo(self.config.data_manager, dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis=avis, pdf_url=pdf_url, attestation_url=attestation_url )
             save_new_template = SaveNewTemplate(self.config.data_manager)
 
             if new_flight:
@@ -184,8 +192,9 @@ class AdminPanel(html.Div, IBaseComponent):
 
             return [self.config.security_manager.perform_action(packed_actions),True]
         return __tmp__
-
+    ## REDIRECT THE ACTION TRIGGERED BY THE SAME SUBMIT BUTTON WHICH IS THE BUTTON IN THE DIALOG BOX
     def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected):
+        print(self.mode)
         if self.mode == self.ACCEPTER_ACTION:
             return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis, selected)
         elif self.mode == self.REFUSER_ACTION:

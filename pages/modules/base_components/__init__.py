@@ -1,4 +1,4 @@
-
+from .manager import Manager
 from .carte import Carte
 from .incoming_data import IncomingData
 from .dossier_info import DossierInfo

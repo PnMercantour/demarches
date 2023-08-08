@@ -30,9 +30,9 @@
     },
     "url-template":{
         "pdf-path" : "http://localhost:8050/pdf/flight_{dossier_id}.pdf",
-        "st-link" : "http://localhost:8050/admin?uuid={flight_id}&st_token={st_token}",
-        "edit-link" : "http://localhost:8050/edit?uuid={flight_id}&security_token={security_token}",
-        "admin-link" : "http://localhost:8050/admin?uuid={flight_id}"
+        "st-link" : "http://localhost:8050/admin?uuid={flight_id}&st_token={st_token}&min_month={min_month}&max_month={max_month}",
+        "edit-link" : "http://localhost:8050/edit?uuid={flight_id}&security_token={security_token}&min_month={min_month}&max_month={max_month}",
+        "admin-link" : "http://localhost:8050/admin?uuid={flight_id}&min_month={min_month}&max_month={max_month}"
     },
     "info-panel-fields":[
         "long",

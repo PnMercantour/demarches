@@ -6,7 +6,7 @@
     sécurisé suivant :
     {url}
 
-    Remarque : {remarque}
+    Remarque : {avis}
 
     Cordialement,
 
