@@ -2,10 +2,10 @@ import dash
 from dash import html
 
 
-from pages.modules.config import  PageConfig, CONTENT_STYLE
+from pages.modules.config import  CONTENT_STYLE
 from pages.modules.base_components import IncomingData, Carte, FlightSaver, ControlPanel, Manager
 from pages.modules.data import DATA_MANAGER
-from pages.modules.managers import DataManager, UserSecurity
+from pages.modules.managers import  UserSecurity
 
 dash.register_page(__name__, path='/',path_template='/')
 
