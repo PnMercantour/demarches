@@ -34,7 +34,7 @@ class Carte(dl.Map, IBaseComponent):
                 'polygon':False,
                 'rectangle':False,
                 'circle':False,
-                'marker':False,
+                'marker':True,
                 'circlemarker':False
             }
     EDIT_CONTROL_NO_EDIT_DRAW = {

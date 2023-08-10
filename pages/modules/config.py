@@ -77,7 +77,7 @@ def CONFIG(path,default : str ="")->str:
 ## APP STYLE
 
 CONTENT_STYLE = {
-    "height": "85vh"
+    "height": "84vh"
 }
 
 ## GLOBAL STYLE CONFIGURATION

@@ -14,11 +14,30 @@ from carto_editor import APP_INFO_BOX, LOADING_BOX, SELECTOR
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'])
 
-
 app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
     html.Div([
-    dbc.NavbarSimple(brand="Carto Editor",color='primary',dark=True),
+    dbc.Navbar(
+    dbc.Container(
+        [
+            dcc.Link(
+                # Use row and col to control vertical alignment of logo / brand
+                dbc.Row(
+                    [
+                        dbc.Col(html.Img(src='./assets/logo.png', height="50px")),
+                        dbc.Col(dbc.NavbarBrand("Carto Editor", className="ms-2 text-light")),
+                    ],
+                    align="center",
+                    className="g-0",
+                ),
+                href=dash.page_registry['pages.docs']['relative_path']+'/index',
+                style={"textDecoration": "none"},
+            )
+        ]
+    ),
+    color="primary",
+    dark=False,
+    ),
     SELECTOR,
     LOADING_BOX,
     APP_INFO_BOX],className='shadow-sm rounded',style={'height':'8vh'}),

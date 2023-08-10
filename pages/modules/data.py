@@ -43,6 +43,7 @@ class BuiltInCallbackFnc():
         if flight == None:
             return [None, APP_INFO_BOX.build_message("Flight not found", 'error')]
         flight = flight.get_last_flight()
+        print(flight)
         flight_geojson = Flight.get_geojson(flight)
 
         similar_flights = self.data_manager.get_similar_flights(flight)

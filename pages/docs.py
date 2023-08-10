@@ -17,7 +17,7 @@ mardown_style = {
 }
 
 def layout(page=None):
-      mardown = dcc.Markdown(not_found, style=mardown_style)
+      mardown = dcc.Markdown(not_found, style=mardown_style, dangerously_allow_html=True)
       if page is not None:
             page = page.replace(".md","")
             if os.path.exists(f"./docs/{page}.md"):

@@ -47,7 +47,7 @@ class Flight(SQL_Fetcher):
         }
 
 
-    def __init__(self, manager , id: str, dossier_id: str, creation_date: str, start_dz: str, end_dz: str):
+    def __init__(self, manager , id: str, dossier_id: str, creation_date: str, dz):
         super().__init__()
         self.id = id
         self.manager = manager
@@ -55,8 +55,9 @@ class Flight(SQL_Fetcher):
         self.creation_date = creation_date
         self.last_flight : Flight = None
         self.geojson = None
-        self.start_dz = start_dz
-        self.end_dz = end_dz
+        self.start_dz = dz[0] if dz != None else "NULL"
+        self.end_dz = dz[-1] if dz != None else "NULL"
+        self.dz = dz if dz != None else ["NULL"]
         self.__is_template = None
 
     def __str__(self) -> str:
@@ -72,16 +73,19 @@ class Flight(SQL_Fetcher):
         return self.creation_date
 
     def get_start_dz(self):
-        return self.start_dz
+        return self.dz[0]
 
     def get_end_dz(self):
-        return self.end_dz
+        return self.dz[-1]
+
+    def get_dz(self):
+        return self.dz
 
     def is_template(self):
         if self.__is_template == None:
             geojson = self.get_geojson()
-            self.is_template = geojson['properties']['is_template']
-        return self.is_template
+            self.__is_template = geojson['properties']['is_template']
+        return self.__is_template
     
         
         
@@ -109,7 +113,7 @@ class Flight(SQL_Fetcher):
             
 
     def __str__(self):
-        return f"Flight({self.id},{self.dossier_id},{self.creation_date} {self.start_dz} -> {self.end_dz})"
+        return f"Flight({self.id},{self.dossier_id},{self.creation_date},({ '->'.join(self.dz) }))"
 
 
 class DataManager(SQL_Fetcher):
@@ -126,13 +130,12 @@ class DataManager(SQL_Fetcher):
 
     def __fetch_flight__(self, uuid: str):
         resp = self.fetch_sql(sql_file='./sql/fetch_flight.sql', request_args=[uuid, uuid])
-        
         if self.is_sql_error(resp) or len(resp) == 0:
             if 'message' in resp:
                 print(resp['message'])
             self.flight_cache[uuid] = None
             return
-        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][3], resp[0][4])
+        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][5])
 
     def __fetch_dossier__(self, id: str):
         resp = self.fetch_sql(sql_request="SELECT dossier_id, dossier_number FROM survol.dossier WHERE dossier_id = %s", request_args=[id])
@@ -167,10 +170,13 @@ class DataManager(SQL_Fetcher):
     def is_file_closed(self, dossier : Dossier) -> bool:
         return dossier.get_dossier_state() == DossierState.ACCEPTE or dossier.get_dossier_state() == DossierState.REFUSE or dossier.get_dossier_state() == DossierState.SANS_SUITE
     def get_similar_flights(self, fligth : Flight) -> list[Flight]:
-        resp = self.fetch_sql(sql_request="SELECT uuid::text FROM survol.get_flight_history(%s)", request_args=[fligth.get_id()])
+        resp = self.fetch_sql(sql_request="SELECT * FROM survol.get_flight_history(%s)", request_args=[fligth.get_id()])
         if len(resp) == 0:
             return []
-        return [self.get_flight_by_uuid(flight[0]) for flight in resp]
+        if resp[0][0] == None:
+            return []
+        uuids = [str(UUID) for UUID in resp[0][0]]
+        return [self.get_flight_by_uuid(uuid) for uuid in uuids]
     def get_flight_by_uuid(self, uuid: str) -> Flight:
         if not uuid in self.flight_cache:
             self.__fetch_flight__(uuid)

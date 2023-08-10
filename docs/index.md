@@ -10,9 +10,9 @@ Vous pouvez naviguer entre les différentes rubriques grâce au sommaire ci dess
 ## Sommaire
 
 ### Fonctionnalitées générales
-- [Carte interactive](map.md)
-- [Créer un tracé de survol](create_flight.md)
-- [Barre de contrôle](control_bar.md)
+- [Carte interactive](general/map.md)
+- [Créer un tracé de survol](general/create_flight.md)
+- [Barre de contrôle](general/control_bar.md)
 
 
 ### Pétitionnaires
@@ -27,3 +27,4 @@ Vous pouvez naviguer entre les différentes rubriques grâce au sommaire ci dess
 ### Services territoriaux
 
 - [Accepter et prescrire](accept_prescribe.md)
+

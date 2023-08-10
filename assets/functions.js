@@ -7,7 +7,11 @@ window.carto = Object.assign({}, window.carto, {
     rendering: {  
         draw_drop_zone: function (feature, latlng)
         {
-            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/50/region-code.png`, iconSize: [35, 35]});
+            let url = `https://img.icons8.com/stickers/50/region-code.png`;
+            if(feature.properties.is_temp){
+                url = 'https://img.icons8.com/stickers/50/bookmark-ribbon.png'
+            }
+            const flag = L.icon({iconUrl: url, iconSize: [35, 35]});
             return L.marker(latlng, {icon: flag});
         },
         draw_cluster_drop_zone: function (feature, latlng)

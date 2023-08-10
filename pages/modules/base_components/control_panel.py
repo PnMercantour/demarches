@@ -30,7 +30,11 @@ class ControlPanel(dbc.Container, IBaseComponent):
             self.dossier_info,
             dbc.Row([
                 dbc.Col([
-                    dbc.Button("Info", id=self.set_id(ControlPanel.BUTTON_INFO), className="mr-1", color="primary" if not self.disable_info_panel else 'dark' , disabled=self.disable_info_panel),
+                        dbc.Col(dbc.Button("Info", id=self.set_id(ControlPanel.BUTTON_INFO), className="mr-1", color="primary" if not self.disable_info_panel else 'dark' , disabled=self.disable_info_panel), width = 4),
+                        dbc.Col(dbc.Button([
+                            html.I(className="bi bi-info-circle me-1"),
+                            " Aide"
+                        ], id=self.set_id("button_help"), className="mr-1", color="primary", href="/docs/index"), width=4),
                 ], width=2, class_name=self.CONTROL_ITEM_CLASS),
                 dbc.Col([
                     dbc.Form([
@@ -88,12 +92,11 @@ class ControlPanel(dbc.Container, IBaseComponent):
             Input(self.get_id(self.MONTH_SLIDER), 'value'),
             State(self.incoming_data.get_prefix(), 'data'),
         )
-        def __filter_by_month__(value,data):
+        def __slider_month_update__(value,data):
             trigger_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
             min = value[0]
             max = value[1]
-            print("trigger id "+trigger_id+" data " + str(data))
             if trigger_id == self.get_id(self.MONTH_SLIDER):
                 data['min_month'] = min
                 data['max_month'] = max

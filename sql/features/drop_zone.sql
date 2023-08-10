@@ -1,13 +1,14 @@
 WITH dp AS(
-    SELECT * FROM survol.c_drop_zone_dz
+    SELECT geom, label, id, is_temp FROM survol.drop_zones
 ),
 features AS (
-    SELECT geom, id, localite,
+    SELECT
     json_build_object(
         'type', 'Feature',
         'properties', json_build_object(
             'id', id,
-            'tooltip', localite
+            'tooltip', label,
+            'is_temp', is_temp
         ),
         'geometry', st_asgeojson (st_transform (st_geometryN(geom,1), 4326), 6)::json
     ) feature

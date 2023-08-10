@@ -47,12 +47,5 @@ control_panel = ControlPanel(config, map, url_data)
 admin_panel = AdminPanel(config, map, url_data)
 
 def layout(**kwargs):
-      print(kwargs)
-      def build_security(data_manager):
-            if 'st_token' in kwargs:
-                  return STSecurity(data_manager)
-            else:
-                  return AdminSecurity(data_manager)
-      manager.security_manager = build_security(DATA_MANAGER)
       url_data.set_data(**kwargs)
       return html.Div([manager, url_data,control_panel, admin_panel, map], style=CONTENT_STYLE)

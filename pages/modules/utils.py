@@ -35,11 +35,19 @@ class EmailSender():
 
 def PolylineToMultistring(features):
     src = {"type":"MultiLineString","coordinates":[]}
-    src['coordinates'] = list(map(lambda x: x['geometry']['coordinates'],features))
-    return src
+    for feature in features: 
+        src["coordinates"].append(feature["geometry"]["coordinates"])
+    return {"type":"Feature","properties":feature["properties"],"geometry":src}
 
 def GetAttestationApercuURL(demarche_number : int , dossier_number : int) -> str:
     return f"https://www.demarches-simplifiees.fr/procedures/{str(demarche_number)}/dossiers/{str(dossier_number)}/apercu_attestation"
+
+def ExtractPointFromGeoJSON(geojson):
+    #filter only point and retrieve a geojson with only point
+    return {"type":"FeatureCollection","features":[feature for feature in geojson["features"] if feature["geometry"]["type"] == "Point"]}
+
+def MergeGeoJSON(geojson1, geojson2):
+    return {"type":"FeatureCollection","features":geojson1["features"] + geojson2["features"]}
 
 
 def conn():

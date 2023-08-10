@@ -12,6 +12,8 @@ from demarches_simpy.utils import DemarchesSimpyException
 from uuid import uuid4
 import json
 
+from shapely.geometry import shape
+
 from pages.modules.interfaces import IAction, IPackedAction
 
 class PackedActions(IAction):
@@ -122,15 +124,16 @@ class GenerateSTToken(IPackedAction, SQL_Fetcher):
         return self
 
 class SaveFlight(IPackedAction, SQL_Fetcher):
-    def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None, template_uuid : str = None) -> None:
+    def __init__(self, data_manager: DataManager, geojson : dict, attached_dossier : Dossier = None, template_uuid : str = 'NULL') -> None:
         '''Attached dossier optional, if not provided, the flight will be created without any attached dossier, doing this at the creation. Returnin in passed args uuid'''
         SQL_Fetcher.__init__(self)
         IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
         self.geojson = geojson
-        self.template_uuid = template_uuid
+        self.template_uuid = f"'{template_uuid}'" if template_uuid != 'NULL' else template_uuid
         self.dossier = attached_dossier
 
     def precondition(self) -> bool:
+        print(self.geojson)
         if self.geojson == None:
             self.trigger_error("No geojson provided")
             return False
@@ -140,25 +143,63 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         if len(self.geojson['features']) == 0:
             self.trigger_error("No features provided")
             return False
+        #check if there is at least one point and one polyline
+        if not self.check_geojson(self.geojson) and self.template_uuid == 'NULL':
+            self.trigger_error("Please provide at least one point and one polyline")
+            return False
         return True
+
+    def check_geojson(self, geojson : dict) -> bool:
+        points = 0
+        lines = 0
+        for feature in geojson['features']:
+            if feature['geometry']['type'] == 'Point':
+                points += 1
+            else:
+                lines += 1
+        return (points > 0 and lines > 0)
+
+    def separate_features(self,geojson : dict) -> tuple:
+        r'''
+            Return a tuple as (markers, lines)
+
+            markers : list of markers
+            lines : list of lines
+        '''
+        markers = []
+        lines = []
+        for feature in geojson['features']:
+            if feature['geometry']['type'] == 'Point':
+                tmp = shape(feature['geometry'])
+                markers.append(tmp.wkt)
+            else:
+                lines.append(feature)
+            
+        if 'type' in lines[0]['properties'] and lines[0]['properties']['type'] == 'polyline':
+            lines = PolylineToMultistring(lines)
+        else:
+            lines = lines[0]
+        lines = shape(lines['geometry']).wkt
+        return (markers, lines)
     
 
     def perform(self, **kwargs) -> any:
         dossier = kwargs['dossier'] if 'dossier' in kwargs else None
         dossier = self.dossier if dossier is None else dossier
-        dossier_id = dossier.get_id() if dossier is not None else None
-        feature = self.geojson['features'][0]
+        dossier_id = f"'{dossier.get_id()}'" if dossier is not None else 'NULL'
         
-        ## Check if the feature is the homemade type, the wonderful polyline
-        print(feature)
-        if 'type' in feature['properties'] and feature['properties']['type'] == 'polyline':
-            geom = PolylineToMultistring(self.geojson['features'])
-            geom = json.dumps(geom)
-        else:
-            geom = json.dumps(feature['geometry'])
-        print(geom)
+        markers, lines = self.separate_features(self.geojson)
+        print("markers : {}".format(markers))
+        print("lines : {}".format(lines))
+        
+        markers = list(map(lambda x: 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(x), markers))
+        markers_array = 'ARRAY[' + ','.join(markers) + ']' if len(markers) > 0 else 'NULL'
+        geom = 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(lines)
 
-        resp = self.fetch_sql(sql_request="INSERT INTO survol.flight_history (geom, dossier_id, linked_template) VALUES (ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s, %s) RETURNING uuid::text", request_args=[geom, dossier_id, self.template_uuid], commit=True)
+        sql_request = "INSERT INTO survol.flight_history (geom, dossier_id, linked_template, raw_dz) VALUES ({}, {}, {}, {}) RETURNING uuid::text".format(geom, dossier_id, self.template_uuid, markers_array)
+        print(sql_request)
+        resp = self.fetch_sql(sql_request=sql_request, commit=True)
+    
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
             return self
@@ -337,12 +378,13 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         
         ## Fetching data
         flight = self.flight.get_last_flight()
-        resp = self.fetch_sql(sql_request='SELECT flight, dz, limites FROM survol.build_map_json(%s)', request_args=[flight.get_id()])
+        resp = self.fetch_sql(sql_request='SELECT flight FROM survol.build_map_json(%s)', request_args=[flight.get_id()])
         if self.is_sql_error(resp):
+            print(resp['message'])
             return self.trigger_error(resp['message'])
         geojson = resp[0][0]
-        dz = resp[0][1]
-        limites = resp[0][2]
+        dz = resp[1][0]
+        limites = resp[2][0]
         geojsons = [
             {
                 "geojson": json.dumps(geojson),
@@ -413,8 +455,9 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         title = DisplayObj('Plan de vol', f"Dossier n°{dossier.get_number()}")
 
         items= []
-        s_dropzone = DisplayObj("Drop zone de départ", flight.get_start_dz())
-        e_dropzone = DisplayObj("Drop zone d'arrivée", flight.get_end_dz())
+        title_option = {'font-weight' : 'bold'}
+        s_dropzone = DisplayObj("Drop zone de départ", flight.get_start_dz(), title_option)
+        e_dropzone = DisplayObj("Drop zones :", "->\n".join(flight.get_dz()), title_option)
         items.append(s_dropzone)
         items.append(e_dropzone)
 
@@ -422,7 +465,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         fields = CONFIG('pdf-fields',[])
         for field in fields:
             if field in dossier_fields:
-                items.append(DisplayObj(field, dossier_fields[field]['stringValue']))
+                items.append(DisplayObj(field, dossier_fields[field]['stringValue'], title_option))
 
 
 

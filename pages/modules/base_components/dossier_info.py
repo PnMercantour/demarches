@@ -51,7 +51,7 @@ class DossierInfo(Offcanvas, IBaseComponent):
 
         return [
             dbc.Col([
-            html.H2(f"Dossier n°{dossier.get_number()}"),
+            html.H2(f"Dossier n°{dossier.get_number()} \n {dossier.get_id()}"),
             dbc.Row([
                 dbc.Badge(f"{str(dossier.get_dossier_state())}", color="primary", className="mr-1"),
             ], justify="start", align="start"),

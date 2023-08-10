@@ -25,6 +25,7 @@ class Manager(dcc.Store, IBaseComponent):
         return self.__security_manager
     @security_manager.setter
     def security_manager(self, security_manager: ISecurityManager) -> None:
+        self.__config.security_manager = security_manager
         self.__security_manager = security_manager
 
         
