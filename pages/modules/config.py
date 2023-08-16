@@ -59,17 +59,19 @@ config_file = json.loads(open('./config.json','r',encoding='utf-8').read())
 
 def CONFIG(path,default : str ="")->str:
     '''exemple_key/exemple_key2/exemple_key3'''
-    
-    key = path.split("/")
+    try:
+        key = path.split("/")
 
-    value = config_file
+        value = config_file
 
-    while len(key) > 0:
-        if key[0] in value:
-            value = value[key.pop(0)]
-        else:
-            return default
-
+        while len(key) > 0:
+            if key[0] in value:
+                value = value[key.pop(0)]
+            else:
+                return default
+    except:
+        print("Error while loading config file")
+        return default
     return value
 
 

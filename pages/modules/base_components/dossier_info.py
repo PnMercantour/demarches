@@ -61,6 +61,7 @@ class DossierInfo(Offcanvas, IBaseComponent):
             
             html.H2("Informations du vol"),
             html.P(f"Dernière modification : {human_readable_format}"),
+            html.P(f"Region(s) : {', '.join(flight.regions)}"),
             html.P(f"Dropzone de départ: {flight.get_start_dz()} "),
             html.P(f"Dropzones :"),
             ]+[html.P("-> "+dz) for dz in flight.get_dz()] + [ html.P(f"{field_label} : {look_for_field(field_label).stringValue}") for field_label in self.custom_fields])

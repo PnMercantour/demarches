@@ -41,6 +41,8 @@ def PolylineToMultistring(features):
 
 def GetAttestationApercuURL(demarche_number : int , dossier_number : int) -> str:
     return f"https://www.demarches-simplifiees.fr/procedures/{str(demarche_number)}/dossiers/{str(dossier_number)}/apercu_attestation"
+def GetDSRedirectionURL(demarche_number : int, dossier_number : int) -> str:
+    return f"https://www.demarches-simplifiees.fr/procedures/{demarche_number}/dossiers/{dossier_number}"
 
 def ExtractPointFromGeoJSON(geojson):
     #filter only point and retrieve a geojson with only point

@@ -247,7 +247,7 @@ class SendMailTo(IPackedAction):
         resp = email_sender.send(self.to,self.header, self.message)
         if resp['type'] == 'error':
             return self.trigger_error(resp)
-        return self.trigger_success('Mail sent')
+        return self.trigger_success('Mail sent', **kwargs)
 
 class SetAnnotation(IPackedAction):
     def __init__(self, data_manager: DataManager, dossier : Dossier, value : str, annotation_label : str) -> None:
@@ -393,7 +393,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
             },
             {
                 "geojson": json.dumps(limites),
-                "ignore" : True, ## Important to ingnore limites in the bounds calculation
+                "ignore" : True, ## Important to ignore limits in the bounds calculation
                 "facecolor": "red",
                 "alpha":0.07,
                 "hatch":'///',
@@ -458,7 +458,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         items= []
         title_option = {'font-weight' : 'bold'}
         s_dropzone = DisplayObj("Drop zone de départ", flight.get_start_dz(), title_option)
-        e_dropzone = DisplayObj("Drop zones :", "->\n".join(flight.get_dz()), title_option)
+        e_dropzone = DisplayObj("Drop zones :", "-> <br>".join(flight.get_dz()), title_option)
         items.append(s_dropzone)
         items.append(e_dropzone)
 

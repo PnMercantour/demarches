@@ -1,4 +1,4 @@
-from dash import no_update, callback, html, dcc, callback_context
+from dash import no_update, callback, html, dcc, callback_context, Patch
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -103,7 +103,10 @@ class ControlPanel(dbc.Container, IBaseComponent):
             else:
                 min = data['min_month'] if 'min_month' in data else min
                 max = data['max_month'] if 'max_month' in data else max
-            return [FEATURE_ZONE_SENSIBLE_OPTION, dict(minMonth=min, maxMonth=max),data, [int(min),int(max)]]
+            patched_data = Patch()
+            patched_data['min_month'] = data['min_month']
+            patched_data['max_month'] = data['max_month']
+            return [FEATURE_ZONE_SENSIBLE_OPTION, dict(minMonth=min, maxMonth=max),patched_data, [int(min),int(max)]]
       
         ## MAP OPTIONS CONTROL CALLBACKS
         def __map_options__(values, zs_dict):

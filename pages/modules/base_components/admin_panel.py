@@ -14,7 +14,7 @@ from demarches_simpy import DossierState
 
 from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR
 from pages.modules.managers import Flight
-from pages.modules.utils import GetAttestationApercuURL, ExtractPointFromGeoJSON,MergeGeoJSON
+from pages.modules.utils import GetAttestationApercuURL, ExtractPointFromGeoJSON,MergeGeoJSON, GetDSRedirectionURL
 
 from pages.modules.interfaces import *
 from pages.modules.flex_components import TriggerCallbackButton
@@ -78,19 +78,23 @@ class AdminPanel(html.Div, IBaseComponent):
         from pages.modules.managers import GenerateSTToken, SendMailTo
         from pages.modules.config import CONFIG
 
-
+        flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
         #Get the correct message skeleton from config
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
         skeleton = CONFIG("email-templates/st-requesting")
         url = CONFIG('url-template/st-link')
 
-        st_request = SendMailTo(self.config.data_manager,'contact@rodriguez-esteban.com', skeleton['subject'], open(skeleton['body-path'],'r', encoding='utf-8').read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
         st_token = GenerateSTToken(self.config.data_manager, dossier)
-        
-
         packed_actions.add_action(st_token)
-        packed_actions.add_action(st_request)
+
+        for region in flight.regions:
+            tos = CONFIG(f'email-route/{region}')
+            for to in tos:
+                req = SendMailTo(self.config.data_manager,to , skeleton['subject'], open(skeleton['body-path'],'r', encoding='utf-8').read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
+                packed_actions.add_action(req)
+
+
 
 
 
@@ -236,6 +240,7 @@ class AdminPanel(html.Div, IBaseComponent):
         disabled_submit = True
         disabled_block = True
         attestation_url = ""
+        ds_url = ""
 
 
         is_hidden = lambda x : "d-none" if x else ""
@@ -246,7 +251,7 @@ class AdminPanel(html.Div, IBaseComponent):
             disabled_block = self.is_st or self.config.data_manager.is_file_closed(dossier)
             disabled_submit = (self.config.data_manager.is_st_token_already_exists(dossier) and not self.is_st) or self.config.data_manager.is_file_closed(dossier)
             attestation_url = GetAttestationApercuURL(CONFIG('general/demarche-number'), dossier.get_number())
-
+            ds_url = GetDSRedirectionURL(CONFIG('general/demarche-number'), dossier.get_number())
         st_label = "Avis ST" if not self.is_st else "Valider"
 
         ## BUILD THE LAYOUT
@@ -257,13 +262,18 @@ class AdminPanel(html.Div, IBaseComponent):
                     dbc.Input(type="password", placeholder="Instructeur Password", className=self.FIELD_CLASS, style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_PASSWORD)),
                 ],id=self.set_id(AdminPanel.LOGIN_FIELD), className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
                 html.Div([
-                    dbc.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG),className=self.BUTTON_CLASS, color='warning' if not self.is_st else 'success'),
-                ], className=f"{is_hidden(disabled_submit)} {self.GROUP_CLASS}"),
+                    dbc.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG),className=f"{is_hidden(disabled_submit)} {self.BUTTON_CLASS}", color='warning' if not self.is_st else 'success'),
+                ],  className=self.GROUP_CLASS),
                 html.Div([
-                    dbc.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), className=self.BUTTON_CLASS, color="success"),
-                    dbc.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), className=self.BUTTON_CLASS, color="danger"),
-                    dbc.Button("Attestation", className=self.BUTTON_CLASS+' btn-primary', style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), href=attestation_url),
-                ], className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
+                    dbc.Button("Accepter", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ACCEPTER), className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}", color="success"),
+                    dbc.Button("Refuser", style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_REFUSER), className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}", color="danger"),
+                    dbc.Button("Attestation", className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}"+' btn-primary', style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_ATTESTATION), href=attestation_url),
+                    dbc.Button([
+                        "DS  ",
+                        html.I(className="bi bi-arrow-up-right-circle-fill")
+                    ], className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}"+' btn-primary ', style=AdminPanel.BUTTON_STYLE, id=self.set_id('ds'), href=ds_url),
+
+                ], className=self.GROUP_CLASS),
                 test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([

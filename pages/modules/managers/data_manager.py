@@ -47,7 +47,7 @@ class Flight(SQL_Fetcher):
         }
 
 
-    def __init__(self, manager , id: str, dossier_id: str, creation_date: str, dz):
+    def __init__(self, manager , id: str, dossier_id: str, creation_date: str, dz, regions : str):
         super().__init__()
         self.id = id
         self.manager = manager
@@ -59,6 +59,7 @@ class Flight(SQL_Fetcher):
         self.end_dz = dz[-1] if dz != None else "NULL"
         self.dz = dz if dz != None else ["NULL"]
         self.__is_template = None
+        self.__regions = regions.split(':')
 
     def __str__(self) -> str:
         return f"Flight({self.id},{self.dossier_id},{self.creation_date})"
@@ -87,7 +88,9 @@ class Flight(SQL_Fetcher):
             self.__is_template = geojson['properties']['is_template']
         return self.__is_template
     
-        
+    @property
+    def regions(self):
+        return self.__regions
         
 
     def get_attached_dossier(self) -> Dossier:
@@ -113,7 +116,7 @@ class Flight(SQL_Fetcher):
             
 
     def __str__(self):
-        return f"Flight({self.id},{self.dossier_id},{self.creation_date},({ '->'.join(self.dz) }))"
+        return f"Flight({self.id},{self.dossier_id},{self.creation_date},({ '->'.join(self.dz) }), [{','.join(self.__regions)}])"
 
 
 class DataManager(SQL_Fetcher):
@@ -135,7 +138,7 @@ class DataManager(SQL_Fetcher):
                 print(resp['message'])
             self.flight_cache[uuid] = None
             return
-        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][5])
+        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][5], resp[0][6])
 
     def __fetch_dossier__(self, id: str):
         resp = self.fetch_sql(sql_request="SELECT dossier_id, dossier_number FROM survol.dossier WHERE dossier_id = %s", request_args=[id])
@@ -163,6 +166,7 @@ class DataManager(SQL_Fetcher):
 
     def is_st_token_already_exists(self, dossier: Dossier) -> bool:
         resp = self.fetch_sql(sql_request="SELECT token FROM survol.st_token WHERE dossier_id = %s;", request_args=[dossier.get_id()])
+        print(resp)
         if self.is_sql_error(resp):
             return False
         if len(resp) > 0:
