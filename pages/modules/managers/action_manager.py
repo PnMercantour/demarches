@@ -393,6 +393,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
             },
             {
                 "geojson": json.dumps(limites),
+                "ignore" : True, ## Important to ingnore limites in the bounds calculation
                 "facecolor": "red",
                 "alpha":0.07,
                 "hatch":'///',
@@ -461,11 +462,13 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         items.append(s_dropzone)
         items.append(e_dropzone)
 
-        dossier_fields = dossier.get_fields()
         fields = CONFIG('pdf-fields',[])
-        for field in fields:
-            if field in dossier_fields:
-                items.append(DisplayObj(field, dossier_fields[field]['stringValue'], title_option))
+        for field_label in fields:
+            for field in dossier.get_fields():
+                if field.label == field_label:
+                    items.append(DisplayObj(field.label, field.stringValue, title_option))
+
+
 
 
 

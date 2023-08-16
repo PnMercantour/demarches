@@ -3,7 +3,7 @@ from dash import html
 import dash_leaflet as dl
 
 from pages.modules.data import BuiltInCallbackFnc
-from pages.modules.config import NS_RENDER, PageConfig, arrow_function, CONTENT_STYLE
+from pages.modules.config import NS_RENDER, PageConfig, arrow_function, CONTENT_STYLE, CONTENT_CLASS
 from pages.modules.base_components import IncomingData, Carte, DossierInfo,AdminPanel, ControlPanel, Manager
 from pages.modules.data import APP_INFO_BOX, SELECTOR, DATA_MANAGER
 from pages.modules.managers import AdminSecurity, STSecurity
@@ -48,4 +48,4 @@ admin_panel = AdminPanel(config, map, url_data)
 
 def layout(**kwargs):
       url_data.set_data(**kwargs)
-      return html.Div([manager, url_data,control_panel, admin_panel, map], style=CONTENT_STYLE)
+      return html.Div([manager, url_data,control_panel, admin_panel, map], style=CONTENT_STYLE, className=CONTENT_CLASS)

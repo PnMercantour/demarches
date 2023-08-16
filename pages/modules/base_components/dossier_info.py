@@ -2,7 +2,7 @@ from dash import html
 from dash_bootstrap_components import Offcanvas
 import dash_bootstrap_components as dbc
 
-from demarches_simpy import Dossier, DossierState
+from demarches_simpy import Dossier, DossierState, Field
 
 from carto_editor import PageConfig, CONFIG
 
@@ -41,7 +41,8 @@ class DossierInfo(Offcanvas, IBaseComponent):
         ## 2023-08-01 14:21:43.366299
         date = datetime.strptime(flight.get_creation_date(), "%Y-%m-%d %H:%M:%S.%f")
         human_readable_format = date.strftime("%B %d, %Y %H:%M:%S")
-        fields = dossier.get_fields()
+        fields : Field = dossier.get_fields()
+        look_for_field = lambda field_name : next((field for field in fields if  field.label == field_name), None)
 
         # 2023-07-27T11:01:44+02:00
         deposit_date_str = dossier.get_deposit_date()
@@ -61,8 +62,8 @@ class DossierInfo(Offcanvas, IBaseComponent):
             html.H2("Informations du vol"),
             html.P(f"Dernière modification : {human_readable_format}"),
             html.P(f"Dropzone de départ: {flight.get_start_dz()} "),
-            html.P(f"Dropzone d'arrivé : {flight.get_end_dz()}"),
-            ] + [ html.P(f"{field_label} : {fields[field_label]['stringValue']}") for field_label in self.custom_fields])
+            html.P(f"Dropzones :"),
+            ]+[html.P("-> "+dz) for dz in flight.get_dz()] + [ html.P(f"{field_label} : {look_for_field(field_label).stringValue}") for field_label in self.custom_fields])
         ]
 
         

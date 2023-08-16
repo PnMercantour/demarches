@@ -125,7 +125,7 @@ class ControlPanel(dbc.Container, IBaseComponent):
 
 
     def __get_root_class__(self):
-        return 'm-2'
+        return 'm-2 shadow-sm p-2'
 
     def __init__(self, config: PageConfig, map: Carte, incoming_data: IncomingData, disable_info_panel: bool = False):
         self.map = map

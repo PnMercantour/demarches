@@ -12,7 +12,7 @@ from carto_editor import APP_INFO_BOX, LOADING_BOX, SELECTOR
 
 
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'])
+app = Dash(__name__, use_pages=True, external_stylesheets=['assets/bootstrap.min.css', dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'])
 
 app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
@@ -25,7 +25,7 @@ app.layout = html.Div([
                 dbc.Row(
                     [
                         dbc.Col(html.Img(src='./assets/logo.png', height="50px")),
-                        dbc.Col(dbc.NavbarBrand("Carto Editor", className="ms-2 text-light")),
+                        dbc.Col(dbc.NavbarBrand("Carto Editor", className="ms-2 text-dark")),
                     ],
                     align="center",
                     className="g-0",
@@ -35,7 +35,7 @@ app.layout = html.Div([
             )
         ]
     ),
-    color="primary",
+    color="light",
     dark=False,
     ),
     SELECTOR,
@@ -44,7 +44,7 @@ app.layout = html.Div([
     # #Main content
     html.Div(id='page-content',children=dash.page_container),
     #Footer with white back ground, rounded corners and shadow
-    dbc.Container("Author : X", class_name='h4 bg-primary text-light text-center', style={'height':'5vh'},fluid=True)
+    dbc.Container("Author : X", class_name='h4 bg-secondary text-dark text-center align-item-center', style={'height':'5vh'},fluid=True)
 ])
 
 # # print('Refreshed')

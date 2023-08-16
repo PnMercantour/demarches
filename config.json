@@ -3,6 +3,23 @@
         "demarche-number": 77818,
         "base-map-path" : "./raster/scan25.tif"
     },
+    "email-route":{
+        "Ubaye Verdon" : [
+            "esteban.rodriguez@mercantour-parcnational.fr"
+        ],
+        "Haut Var Cians" : [
+            "esteban.rodriguez@mercantour-parcnational.fr"
+        ],
+        "Vésubie" : [
+            "esteban.rodriguez@mercantour-parcnational.fr"
+        ],
+        "Tinée" : [
+            "esteban.rodriguez@mercantour-parcnational.fr"
+        ],
+        "Roya Bevera" : [
+            "esteban.rodriguez@mercantour-parcnational.fr"
+        ]
+    },    
     "email-templates": {
         "st-requesting": {
             "subject": "Validation ST dossier n°{dossier_number}",

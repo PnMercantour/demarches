@@ -80,6 +80,8 @@ CONTENT_STYLE = {
     "height": "84vh"
 }
 
+CONTENT_CLASS = 'bg-secondary'
+
 ## GLOBAL STYLE CONFIGURATION
 
 FEATURE_LIMITES_STYLE = {

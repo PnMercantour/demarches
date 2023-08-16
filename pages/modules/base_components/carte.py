@@ -76,7 +76,7 @@ class Carte(dl.Map, IBaseComponent):
                             ], className='d-flex flex-row'),
                         ],
                         style={'textAlign': 'start'}
-                    ),
+                    ),color='secondary'
                 )
 
     def __fnc_center_on_flight__(self, data):
