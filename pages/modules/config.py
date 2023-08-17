@@ -55,7 +55,9 @@ NS_RENDER = Namespace("carto","rendering")
 
 
 import json
-config_file = json.loads(open('./config.json','r',encoding='utf-8').read())
+opened_file = open('./config.json','r',encoding='utf-8')
+config_file = json.loads(opened_file.read())
+opened_file.close()
 
 def CONFIG(path,default : str ="")->str:
     '''exemple_key/exemple_key2/exemple_key3'''

@@ -71,7 +71,13 @@ class SQL_Fetcher():
         if sql_file == None and sql_request == None:
             raise Exception("sql_file or sql_request must be defined")
         try:
-            request = sql_request if sql_request != None else open(sql_file, 'r').read()
+            if sql_request != None:
+                request = sql_request 
+            else:
+                file = open(sql_file, 'r')
+                request = file.read()
+                file.close()
+
             with self.CONN.cursor() as cursor:
                 cursor.execute(request, request_args)
                 
@@ -79,6 +85,9 @@ class SQL_Fetcher():
                     self.CONN.commit()
 
                 print('SQL REQUESTED ')
+                verbose_sql = os.getenv('VERBOSE_SQL', 'False').lower() in ['true', '1', 't', 'y', 'yes']
+                if verbose_sql:
+                    print(request)
                 return cursor.fetchall()
 
 

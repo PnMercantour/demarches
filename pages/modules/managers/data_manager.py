@@ -126,8 +126,8 @@ class DataManager(SQL_Fetcher):
         self.flight_cache : dict[str, Flight] = {}
 
         self.dossier_linked_to_last_flight : dict[Dossier, Flight] = {}
-
-        self.profile = Profile(os.getenv('DS_KEY'), verbose = bool(os.getenv('VERBOSE')) , warning = True)
+        verbose = os.getenv("VERBOSE", 'False').lower() in ('true', '1', 't')
+        self.profile = Profile(os.getenv('DS_KEY'), verbose = verbose , warning = True)
 
 
     def __fetch_flight__(self, uuid: str):

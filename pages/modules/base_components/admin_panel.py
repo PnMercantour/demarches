@@ -92,7 +92,8 @@ class AdminPanel(html.Div, IBaseComponent):
         for region in flight.regions:
             tos = CONFIG(f'email-route/{region}')
             for to in tos:
-                req = SendMailTo(self.config.data_manager,to , skeleton['subject'], open(skeleton['body-path'],'r', encoding='utf-8').read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
+                with open(skeleton['body-path'],'r', encoding='utf-8') as f:
+                    req = SendMailTo(self.config.data_manager,to , skeleton['subject'], f.read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
                 packed_actions.add_action(req)
 
 
@@ -111,7 +112,8 @@ class AdminPanel(html.Div, IBaseComponent):
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
         url =  BUILD_URL('admin?uuid={flight_id}&min_month={min_month}&max_month={max_month}').format(flight_id=uuid,min_month=min_month,max_month=max_month)
-        st_prescription = SendMailTo(self.config.data_manager,dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), prescription=avis,url=url)
+        with open(skeleton['body-path'],'r', encoding='utf-8') as f:
+            st_prescription = SendMailTo(self.config.data_manager,dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'],f.read(), prescription=avis,url=url)
         set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/st-prescription"))
 
         packed_actions.add_action(set_annotation)
@@ -186,7 +188,8 @@ class AdminPanel(html.Div, IBaseComponent):
             add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
             build_pdf = BuildPdf(self.config.data_manager, dossier, flight, months)
-            send_instruct = SendMailTo(self.config.data_manager, dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis=avis, pdf_url=pdf_url, attestation_url=attestation_url )
+            with open(skeleton['body-path'],"r",encoding='utf-8') as f:
+                send_instruct = SendMailTo(self.config.data_manager, dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'], f.read(), avis=avis, pdf_url=pdf_url, attestation_url=attestation_url )
             save_new_template = SaveNewTemplate(self.config.data_manager)
 
             if new_flight:
