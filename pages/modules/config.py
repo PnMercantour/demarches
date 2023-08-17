@@ -74,7 +74,8 @@ def CONFIG(path,default : str ="")->str:
         return default
     return value
 
-
+def BUILD_URL(path : str)->str:
+    return os.getenv('HOST','https//localhost:8050') + '/' + path
 
 ## APP STYLE
 

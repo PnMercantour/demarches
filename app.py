@@ -47,7 +47,6 @@ app.layout = html.Div([
     dbc.Container("Author : X", class_name='h4 bg-secondary text-dark text-center align-item-center', style={'height':'5vh'},fluid=True)
 ])
 
-# # print('Refreshed')
 import os
 
 
@@ -73,4 +72,4 @@ def send_pdf(path):
 
 
 if(__name__ == "__main__"):
-    app.run(debug=True, host='localhost', port=8050)
+    app.run(debug=True, host='localhost')

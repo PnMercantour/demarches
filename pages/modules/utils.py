@@ -55,9 +55,7 @@ def MergeGeoJSON(geojson1, geojson2):
 def conn():
     conn = pg.connect(os.getenv("DB_CONNECTION"))
     if conn is None:
-        print("Error")
-    else:
-        print("Connected")
+        print("Error while connecting to database")
     return conn
 
 class SQL_Fetcher():

@@ -1,0 +1,37 @@
+{
+    "email-route":{
+        "Ubaye Verdon" : [],
+        "Haut Var Cians" : [],
+        "Vésubie" : [],
+        "Tinée" : [],
+        "Roya Bevera" : []
+    },    
+    "email-templates": {
+        "st-requesting": {
+            "subject": "Validation ST dossier n°{dossier_number}",
+            "body-path": "./email-templates/st-requesting.txt"
+        },
+        "st-prescription":{
+            "subject": "Prescription ST dossier n°{dossier_number}",
+            "body-path": "./email-templates/st-prescription.txt"
+        },
+        "dossier-accepted":{
+            "subject": "Dossier n°{dossier_number} accepté",
+            "body-path": "./email-templates/dossier-accepted.txt"
+        },
+        "dossier-rejected":{
+            "subject": "Dossier n°{dossier_number} refusé",
+            "body-path": "./email-templates/dossier-rejected.txt"
+        }
+    },
+    "pdf-template":"vol_mercantour",
+    "label-field":{
+        "st-prescription": "st-prescription",
+        "security-token" : "security-token",
+        "instructor-url" : "url-instructeur",
+        "flight-pdf-url" : "plan-de-vol",
+        "user-edit-link" : "user-edit-link"
+    },
+    "info-panel-fields":[],
+    "pdf-fields": []
+}

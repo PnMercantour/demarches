@@ -12,7 +12,6 @@ class FlightSelector(dcc.Store, IBaseComponent, SingleInputCallback):
         if feature is not None:
             flight = self.config.data_manager.get_flight_by_uuid(feature['properties']['id'])
             if flight is not None:
-                print(flight)
                 return flight.get_id()
             else:
                 return no_update

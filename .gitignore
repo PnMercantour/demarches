@@ -1,6 +1,8 @@
 .venv
 .vscode
 .env
+
+config.json
 test.py
 
 # pycache

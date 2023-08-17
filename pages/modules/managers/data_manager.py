@@ -127,9 +127,8 @@ class DataManager(SQL_Fetcher):
 
         self.dossier_linked_to_last_flight : dict[Dossier, Flight] = {}
 
-        self.profile = Profile('OGM3NDUzNjAtZDM2MS00NGY4LWEyNTAtOTUyY2FjZmM1MTU1O2VNTnVKb3hnMWVCQXRtSENNdlVIRXJ4Yw==', verbose = bool(os.getenv('verbose')) , warning = True)
+        self.profile = Profile(os.getenv('DS_KEY'), verbose = bool(os.getenv('VERBOSE')) , warning = True)
 
-        self.empty_dossier = Dossier(00000, self.profile, "Empty Dossier")
 
     def __fetch_flight__(self, uuid: str):
         resp = self.fetch_sql(sql_file='./sql/fetch_flight.sql', request_args=[uuid, uuid])
@@ -166,7 +165,6 @@ class DataManager(SQL_Fetcher):
 
     def is_st_token_already_exists(self, dossier: Dossier) -> bool:
         resp = self.fetch_sql(sql_request="SELECT token FROM survol.st_token WHERE dossier_id = %s;", request_args=[dossier.get_id()])
-        print(resp)
         if self.is_sql_error(resp):
             return False
         if len(resp) > 0:
@@ -175,7 +173,6 @@ class DataManager(SQL_Fetcher):
         return dossier.get_dossier_state() == DossierState.ACCEPTE or dossier.get_dossier_state() == DossierState.REFUSE or dossier.get_dossier_state() == DossierState.SANS_SUITE
     def get_similar_flights(self, fligth : Flight) -> list[Flight]:
         resp = self.fetch_sql(sql_request="SELECT * FROM survol.get_flight_history(%s)", request_args=[fligth.get_id()])
-        print(resp)
         if len(resp) == 0:
             return []
         if resp[0][0] == None:

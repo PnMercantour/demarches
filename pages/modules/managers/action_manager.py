@@ -1,11 +1,12 @@
 from __future__ import annotations
+import os
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pages.modules.managers.data_manager import DataManager, Flight
 
 
 
-from pages.modules.config import SecurityLevel, CONFIG
+from pages.modules.config import SecurityLevel, CONFIG,BUILD_URL
 from pages.modules.utils import PolylineToMultistring, SQL_Fetcher
 from demarches_simpy import Demarche, Dossier, DossierState, AnnotationModifier, StateModifier
 from demarches_simpy.utils import DemarchesSimpyException
@@ -61,8 +62,6 @@ class PackedActions(IAction):
                 self.result = action.result
                 return None
             previous_kwargs = action.passed_kwargs
-        if self.verbose:
-            print(tmp)
         self.returned_value = previous_kwargs
         self.result = tmp[-1].result
         return self
@@ -133,7 +132,6 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         self.dossier = attached_dossier
 
     def precondition(self) -> bool:
-        print(self.geojson)
         if self.geojson == None:
             self.trigger_error("No geojson provided")
             return False
@@ -185,21 +183,17 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         dossier_id = f"'{dossier.get_id()}'" if dossier is not None else 'NULL'
         
         markers, lines = self.separate_features(self.geojson)
-        print("markers : {}".format(markers))
-        print("lines : {}".format(lines))
-        
+ 
         markers = list(map(lambda x: 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(x), markers))
         markers_array = 'ARRAY[' + ','.join(markers) + ']' if len(markers) > 0 else 'NULL'
         geom = 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(lines)
 
         sql_request = "INSERT INTO survol.flight_history (geom, dossier_id, linked_template, raw_dz) VALUES ({}, {}, {}, {}) RETURNING uuid::text".format(geom, dossier_id, self.template_uuid, markers_array)
-        print(sql_request)
         resp = self.fetch_sql(sql_request=sql_request, commit=True)
     
         if self.is_sql_error(resp):
             self.trigger_error(resp['message'])
             return self
-        print(resp)
         uuid = resp[0][0]
         self.result = {"message":"Flight saved", "type":"success", "uuid":uuid}
         self.passed_kwargs = {
@@ -490,13 +484,13 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
 
 
 
-        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=CONFIG('general/base-map-path','raster/scan25.tif'))
-        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema='./pdf-templates/vol_mercantour')
+        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH'))
+        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema=f'./pdf-templates/{CONFIG("pdf-template","vol_mercantour")}')
 
 
     def perform(self, **kwargs) -> any:
         from threading import Thread
-        file_path = CONFIG('url-template/pdf-path', default='./pdf/{dossier_id}.pdf').format(dossier_id=self.dossier.get_id())
+        file_path = BUILD_URL('pdf/flight_{dossier_id}.pdf').format(dossier_id=self.dossier.get_id())
 
         thread = Thread(target=self.__build_pdf__, args=(self.dossier,))
         thread.start()
@@ -521,7 +515,7 @@ class CreatePrefilledDossier(IPackedAction):
         import requests
 
         uuid = kwargs['uuid']
-        demarche_number = CONFIG("general/demarche-number")
+        demarche_number = int(os.getenv('DEMARCHE_NUMBER', 000000))
         
         # Field and Annotation
 
@@ -540,8 +534,8 @@ class CreatePrefilledDossier(IPackedAction):
             id_user_edit_url = fields[f_user_edit_url]['id']
 
             security_token = str(uuid4())
-            instructor_url = CONFIG("url-template/admin-link", default="http://localhost:8000").format(flight_id=uuid, **self.other_field)
-            user_edit_url = CONFIG("url-template/edit-link", default="http://localhost:8000").format(flight_id=uuid, security_token=security_token, **self.other_field)
+            instructor_url = BUILD_URL('admin?uuid={flight_id}&min_month={min_month}&max_month={max_month}').format(flight_id=uuid, **self.other_field)
+            user_edit_url = BUILD_URL('edit?uuid={flight_id}&security_token={security_token}&min_month={min_month}&max_month={max_month}').format(flight_id=uuid, security_token=security_token, **self.other_field)
             
             data = {
                 f"champ_{id_security_token}":security_token,
@@ -628,7 +622,6 @@ class SaveNewTemplate(IPackedAction, SQL_Fetcher):
 
         if self.is_sql_error(resp):
             return self.trigger_error(resp['message'])
-        print(resp)
         if resp[0][0] != None:
             return self.trigger_success("No template to save")
 

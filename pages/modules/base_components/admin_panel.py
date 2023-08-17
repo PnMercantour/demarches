@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 from typing import TYPE_CHECKING
 
@@ -12,7 +13,7 @@ import dash_bootstrap_components as dbc
 
 from demarches_simpy import DossierState
 
-from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR
+from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR, BUILD_URL
 from pages.modules.managers import Flight
 from pages.modules.utils import GetAttestationApercuURL, ExtractPointFromGeoJSON,MergeGeoJSON, GetDSRedirectionURL
 
@@ -83,7 +84,7 @@ class AdminPanel(html.Div, IBaseComponent):
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
         skeleton = CONFIG("email-templates/st-requesting")
-        url = CONFIG('url-template/st-link')
+        url = BUILD_URL("admin?uuid={flight_id}&st_token={st_token}&min_month={min_month}&max_month={max_month}")
 
         st_token = GenerateSTToken(self.config.data_manager, dossier)
         packed_actions.add_action(st_token)
@@ -109,7 +110,7 @@ class AdminPanel(html.Div, IBaseComponent):
         skeleton = CONFIG("email-templates/st-prescription")
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
-        url =  CONFIG('url-template/admin-link').format(flight_id=uuid,min_month=min_month,max_month=max_month)
+        url =  BUILD_URL('admin?uuid={flight_id}&min_month={min_month}&max_month={max_month}').format(flight_id=uuid,min_month=min_month,max_month=max_month)
         st_prescription = SendMailTo(self.config.data_manager,dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'],open(skeleton['body-path'],'r', encoding='utf-8').read(), prescription=avis,url=url)
         set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/st-prescription"))
 
@@ -125,10 +126,7 @@ class AdminPanel(html.Div, IBaseComponent):
         uuid = data['uuid']
         flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
         dossier =  flight.get_attached_dossier().force_fetch()
-        st_token = data['st_token']
-
-        print(geojson)
-
+        
         self.process_connection(data, email, password)
         if not self.security_manager.is_logged():
             return [{"message" : "Invalid credentials", 'type':"error"}, False]
@@ -168,8 +166,8 @@ class AdminPanel(html.Div, IBaseComponent):
             months = (data['min_month'], data['max_month'])
             flight : Flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
             dossier = flight.get_attached_dossier().force_fetch()
-            skeleton = CONFIG("email-templates/dossier-accepted") if state == DossierState.ACCEPTE else CONFIG("email-templates/dossier-refused")
-            pdf_url = CONFIG("url-template/pdf-path").format(dossier_id=dossier.get_id())
+            skeleton = CONFIG("email-templates/dossier-accepted") if state == DossierState.ACCEPTE else CONFIG("email-templates/dossier-rejected")
+            pdf_url = BUILD_URL('pdf/flight_{dossier_id}.pdf').format(dossier_id=dossier.get_id())
             attestation_url=lambda dossier : dossier.force_fetch().get_data()['dossier']['attestation']['url'] if state == DossierState.ACCEPTE else ""
             self.process_connection(data, email, password)
             print(type(self.security_manager))
@@ -213,7 +211,6 @@ class AdminPanel(html.Div, IBaseComponent):
         return __tmp__
     ## REDIRECT THE ACTION TRIGGERED BY THE SAME SUBMIT BUTTON WHICH IS THE BUTTON IN THE DIALOG BOX
     def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected):
-        print(self.mode)
         if self.mode == self.ACCEPTER_ACTION:
             return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis, selected)
         elif self.mode == self.REFUSER_ACTION:
@@ -251,8 +248,8 @@ class AdminPanel(html.Div, IBaseComponent):
             dossier = flight.get_attached_dossier() 
             disabled_block = self.is_st or self.config.data_manager.is_file_closed(dossier)
             disabled_submit = (self.config.data_manager.is_st_token_already_exists(dossier) and not self.is_st) or self.config.data_manager.is_file_closed(dossier)
-            attestation_url = GetAttestationApercuURL(CONFIG('general/demarche-number'), dossier.get_number())
-            ds_url = GetDSRedirectionURL(CONFIG('general/demarche-number'), dossier.get_number())
+            attestation_url = GetAttestationApercuURL(os.getenv('DEMARCHE_NUMBER', 000000), dossier.get_number())
+            ds_url = GetDSRedirectionURL(os.getenv('DEMARCHE_NUMBER', 000000), dossier.get_number())
         st_label = "Avis ST" if not self.is_st else "Valider"
 
         ## BUILD THE LAYOUT
@@ -332,8 +329,6 @@ class AdminPanel(html.Div, IBaseComponent):
         prevent_initial_call=True,
         )
         def __set__(*args):
-            #TODO: refacto STATE COMPONENT
-            print(ctx.triggered_id)
             if args[0] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_TRIGGER_DIALOG):
                 self.mode = AdminPanel.SUBMIT_ACTION
                 return True
