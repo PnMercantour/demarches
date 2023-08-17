@@ -9,8 +9,7 @@ if TYPE_CHECKING:
 from demarches_simpy import DossierState
 
 import dash_leaflet as dl
-from dotenv import dotenv_values
-from dash_extensions.javascript import Namespace, arrow_function
+from dash_extensions.javascript import Namespace
 
 import dotenv
 import os
@@ -147,7 +146,7 @@ tile_url = ("https://wxs.ign.fr/CLEF/geoportail/wmts?" +
                 "&TILEMATRIX={z}" +
                 "&TILEROW={y}" +
                 "&TILECOL={x}")
-tile_url = tile_url.replace("CLEF",os.getenv("IGN_KEY"))
+tile_url = tile_url.replace("CLEF",os.getenv("IGN_KEY", "decouverte"))
 tile_size = 256
 attribution = "© IGN-F/Geoportail"
 
