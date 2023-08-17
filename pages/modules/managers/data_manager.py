@@ -175,6 +175,7 @@ class DataManager(SQL_Fetcher):
         return dossier.get_dossier_state() == DossierState.ACCEPTE or dossier.get_dossier_state() == DossierState.REFUSE or dossier.get_dossier_state() == DossierState.SANS_SUITE
     def get_similar_flights(self, fligth : Flight) -> list[Flight]:
         resp = self.fetch_sql(sql_request="SELECT * FROM survol.get_flight_history(%s)", request_args=[fligth.get_id()])
+        print(resp)
         if len(resp) == 0:
             return []
         if resp[0][0] == None:

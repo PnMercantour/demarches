@@ -165,6 +165,7 @@ class AdminPanel(html.Div, IBaseComponent):
             from pages.modules.config import CONFIG
 
             uuid = data['uuid']
+            months = (data['min_month'], data['max_month'])
             flight : Flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
             dossier = flight.get_attached_dossier().force_fetch()
             skeleton = CONFIG("email-templates/dossier-accepted") if state == DossierState.ACCEPTE else CONFIG("email-templates/dossier-refused")
@@ -186,7 +187,7 @@ class AdminPanel(html.Div, IBaseComponent):
             delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
             add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
-            build_pdf = BuildPdf(self.config.data_manager, dossier, flight)
+            build_pdf = BuildPdf(self.config.data_manager, dossier, flight, months)
             send_instruct = SendMailTo(self.config.data_manager, dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'], open(skeleton['body-path'],"r",encoding='utf-8').read(), avis=avis, pdf_url=pdf_url, attestation_url=attestation_url )
             save_new_template = SaveNewTemplate(self.config.data_manager)
 
@@ -258,9 +259,9 @@ class AdminPanel(html.Div, IBaseComponent):
         layout = html.Div([
             dbc.InputGroup([
                 html.Div([
-                    dbc.Input(type="email", placeholder="Instructeur Email", className=self.FIELD_CLASS,style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_EMAIL)),
-                    dbc.Input(type="password", placeholder="Instructeur Password", className=self.FIELD_CLASS, style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_PASSWORD)),
-                ],id=self.set_id(AdminPanel.LOGIN_FIELD), className=f"{is_hidden(disabled_block)} {self.GROUP_CLASS}"),
+                    dbc.Input(type="email", placeholder="Instructeur Email", className=f"{is_hidden(disabled_block)} {self.FIELD_CLASS}",style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_EMAIL)),
+                    dbc.Input(type="password", placeholder="Instructeur Password", className=f"{is_hidden(disabled_block)} {self.FIELD_CLASS}", style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_PASSWORD)),
+                ],id=self.set_id(AdminPanel.LOGIN_FIELD), className="self.GROUP_CLASS"),
                 html.Div([
                     dbc.Button(st_label, style=AdminPanel.BUTTON_STYLE, id=self.set_id(AdminPanel.B_TRIGGER_DIALOG),className=f"{is_hidden(disabled_submit)} {self.BUTTON_CLASS}", color='warning' if not self.is_st else 'success'),
                 ],  className=self.GROUP_CLASS),
@@ -305,7 +306,7 @@ class AdminPanel(html.Div, IBaseComponent):
             flight = self.config.data_manager.get_flight_by_uuid(uuid).get_last_flight()
             from pages.modules.managers.action_manager import BuildPdf
 
-            pdf = BuildPdf(self.config.data_manager, flight.get_attached_dossier(), flight)
+            pdf = BuildPdf(self.config.data_manager, flight.get_attached_dossier(), flight, [5,8])
             return pdf.perform().result
             return save_flight.perform().result
 

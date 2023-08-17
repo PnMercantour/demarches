@@ -143,10 +143,6 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         if len(self.geojson['features']) == 0:
             self.trigger_error("No features provided")
             return False
-        #check if there is at least one point and one polyline
-        if not self.check_geojson(self.geojson) and self.template_uuid == 'NULL':
-            self.trigger_error("Please provide at least one point and one polyline")
-            return False
         return True
 
     def check_geojson(self, geojson : dict) -> bool:
@@ -353,12 +349,13 @@ class ChangeDossierState(IPackedAction):
         return self.trigger_success("State changed", **kwargs)
 
 class BuildPdf(IPackedAction, SQL_Fetcher):
-    def __init__(self, data_manager: DataManager, dossier : Dossier, flight : Flight) -> None:
+    def __init__(self, data_manager: DataManager, dossier : Dossier, flight : Flight, months : tuple) -> None:
         SQL_Fetcher.__init__(self)
         IPackedAction.__init__(self, data_manager, security_lvl=SecurityLevel.AUTH)
 
         self.dossier = dossier
         self.flight = flight
+        self.months = months
 
     def precondition(self) -> bool:
         #Check if flight is valid
@@ -377,14 +374,16 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         import json
         
         ## Fetching data
+        min_month, max_month = self.months
         flight = self.flight.get_last_flight()
-        resp = self.fetch_sql(sql_request='SELECT flight FROM survol.build_map_json(%s)', request_args=[flight.get_id()])
+        resp = self.fetch_sql(sql_request='SELECT flight FROM survol.build_map_json(%s,%s,%s)', request_args=[flight.get_id(), min_month, max_month])
         if self.is_sql_error(resp):
             print(resp['message'])
             return self.trigger_error(resp['message'])
         geojson = resp[0][0]
         dz = resp[1][0]
         limites = resp[2][0]
+        zs = resp[3][0]
         geojsons = [
             {
                 "geojson": json.dumps(geojson),
@@ -395,10 +394,19 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
                 "geojson": json.dumps(limites),
                 "ignore" : True, ## Important to ignore limits in the bounds calculation
                 "facecolor": "red",
-                "alpha":0.07,
+                "alpha":0.10,
                 "hatch":'///',
                 "edgecolor": "red",
                 "lw":2
+            },
+            {
+                "geojson": json.dumps(zs),
+                "ignore" : True, ## Important to ignore limits in the bounds calculation
+                "facecolor": "red",
+                "alpha":0.15,
+                "hatch":'xxx',
+                "edgecolor": "red",
+                "lw":3
             },
             {
                 "geojson": json.dumps(dz),
@@ -419,6 +427,15 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
                 "edgecolor": "red",
                 "alpha":0.25,
                 "hatch":'///',
+                "lw":2
+            },
+            {
+                "type" : "Patch",
+                "label": "Zone sensible",
+                "facecolor": "red",
+                "edgecolor": "red",
+                "alpha":0.25,
+                "hatch":'xxx',
                 "lw":2
             },
             {

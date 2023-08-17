@@ -47,6 +47,7 @@ class BuiltInCallbackFnc():
         flight_geojson = Flight.get_geojson(flight)
 
         similar_flights = self.data_manager.get_similar_flights(flight)
+        print(similar_flights)
         geojson = Flight.build_geojson_from_flights(similar_flights)
         # Append the current flight to the list
         geojson['features'].insert(0, flight_geojson)
