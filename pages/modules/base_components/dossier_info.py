@@ -36,8 +36,8 @@ class DossierInfo(Offcanvas, IBaseComponent):
             return html.Div('Waiting for data ...')
 
         from datetime import datetime
-        import locale
-        locale.setlocale(locale.LC_TIME, "fr_FR")
+        # import locale
+        # locale.setlocale(locale.LC_TIME, "fr_FR")
         ## 2023-08-01 14:21:43.366299
         date = datetime.strptime(flight.get_creation_date(), "%Y-%m-%d %H:%M:%S.%f")
         human_readable_format = date.strftime("%B %d, %Y %H:%M:%S")
