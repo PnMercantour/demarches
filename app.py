@@ -11,8 +11,8 @@ from carto_editor import APP_INFO_BOX, LOADING_BOX, SELECTOR
 
 
 
-
-app = Dash(__name__, use_pages=True, external_stylesheets=['assets/bootstrap.min.css', dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'])
+server = flask.Flask(__name__) # define flask app.server
+app = Dash(__name__, use_pages=True, external_stylesheets=['assets/bootstrap.min.css', dbc.themes.LUMEN, dbc.icons.BOOTSTRAP,'assets/custom_range_slider.css'],server=server)
 
 app.layout = html.Div([
     #Header with white back ground, rounded corners and shadow
