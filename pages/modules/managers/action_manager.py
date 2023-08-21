@@ -463,8 +463,12 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
                     
         ]
 
+        ## Set title
+        title_raw = CONFIG('pdf/title', 'Plan de vol').format(dossier_number=dossier.get_number(), flight_uuid=flight.get_id())
+        sub_title_raw = CONFIG('pdf/subtitle', 'Dossier n°{dossier_number}').format(dossier_number=dossier.get_number(), flight_uuid=flight.get_id())
+
         ## Set DisplayObj
-        title = DisplayObj('Plan de vol', f"Dossier n°{dossier.get_number()}")
+        title = DisplayObj(title_raw, sub_title_raw, {'font-weight' : 'bold'})
 
         items= []
         title_option = {'font-weight' : 'bold'}
@@ -473,7 +477,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         items.append(s_dropzone)
         items.append(e_dropzone)
 
-        fields = CONFIG('pdf-fields',[])
+        fields = CONFIG('pdf/pdf-fields',[])
         for field_label in fields:
             for field in dossier.get_fields():
                 if field.label == field_label:
@@ -485,7 +489,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
 
 
         printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH'))
-        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema=f'./pdf-templates/{CONFIG("pdf-template","vol_mercantour")}')
+        printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema=f'./pdf-templates/{CONFIG("pdf/pdf-template","vol_mercantour")}')
 
 
     def perform(self, **kwargs) -> any:

@@ -16,6 +16,17 @@
 body {
     margin: 0; /* Ajout d'une marge nulle pour éviter les marges par défaut du navigateur */
 }
+footer {
+    margin: 0;
+    color:tomato;
+    text-align: center;
+    font-weight: bold;
+    height: 5mm;
+    font-size: smaller;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
 
 .content {
     display: flex;
@@ -33,7 +44,7 @@ body {
 
 .carto-header {
     display: flex;
-    height: calc(var(--doc-height) - var(--content-height));
+    height: calc(var(--doc-height) - var(--content-height)) - 5mm;
     width: var(--content-width);
 }
 

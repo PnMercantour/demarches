@@ -25,7 +25,12 @@
             "body-path": "./email-templates/dossier-rejected.txt"
         }
     },
-    "pdf-template":"vol_mercantour",
+    "pdf" : {
+        "pdf-template":"vol_mercantour",
+        "title" : "Annexe",
+        "subtitle" : "Plan de vol",
+        "pdf-fields": []
+    },
     "label-field":{
         "st-prescription": "st-prescription",
         "security-token" : "security-token",
@@ -33,6 +38,5 @@
         "flight-pdf-url" : "plan-de-vol",
         "user-edit-link" : "user-edit-link"
     },
-    "info-panel-fields":[],
-    "pdf-fields": []
+    "info-panel-fields":[]
 }

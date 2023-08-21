@@ -121,7 +121,12 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
             "body-path": "./email-templates/dossier-rejected.txt"
         }
     },
-    "pdf-template":"vol_mercantour",
+    "pdf" : {
+        "pdf-template":"vol_mercantour",
+        "title" : "Annexe",
+        "subtitle" : "Plan de vol",
+        "pdf-fields": []
+    },
     "label-field":{
         "st-prescription": "st-prescription",
         "security-token" : "security-token",
@@ -129,8 +134,7 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
         "flight-pdf-url" : "plan-de-vol",
         "user-edit-link" : "user-edit-link"
     },
-    "info-panel-fields":[],
-    "pdf-fields": []
+    "info-panel-fields":[]
 }
 ```
 
@@ -140,9 +144,11 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `email-route`       | Liste des adresses mail des instructeurs pour chaque région, le nom des régions peuvents être changé et corresponde à la colonne region dans la base de données, mettre dans `default` si il n'y a pas de route                                             |
 | `email-templates`   | Liste des templates de mail, `subject` correspond au sujet du mail, `body-path` correspond au chemin vers le fichier contenant le corps du mail, vous pouvez personnalisé vos mails avec des variables en respectant la syntaxe (voir les mails par défaut) |
-| `pdf-template`      | Nom du template de pdf à utiliser qui est le nom du fichier html et css présent dans le dossier `pdf-templates`, pour rajouter votre propre squelette, rajouter les dans ce dossier avec le même nom pour le css et html                                    |
 | `label-field`       | Liste des nom des variables des champs et annotations de démarches simplifiées requis par l'application (propre à la démarche)                                                                                                                              |
 | `info-panel-fields` | Liste des champs démarches simplifiées à afficher dans le panel information                                                                                                                                                                                 |
 | `pdf-fields`        | Liste des champs démarches simplifiées à afficher dans le pdf de survol final                                                                                                                                                                               |
+| `pdf-template`      | Nom du template de pdf à utiliser qui est le nom du fichier html et css présent dans le dossier `pdf-templates`, pour rajouter votre propre squelette, rajouter les dans ce dossier avec le même nom pour le css et html                                    |
+| `title`             | Titre du pdf                          (peut être formatté)                                                                                                                                                                                                  |
+| `subtitle`          | Sous-titre du pdf (peut être formatté )                                                                                                                                                                                                                     |
 
 
