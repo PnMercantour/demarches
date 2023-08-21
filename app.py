@@ -65,9 +65,9 @@ def get_file(filename):  # pragma: no cover
 
 
 @app.server.route('/pdf/<path:path>')
-def send_pdf(path):
-    content = get_file(path)
-    return Response(content, mimetype="application/pdf")
+def serve_media(path):
+    return flask.send_from_directory("./pdf/", path)
+
 
 
 

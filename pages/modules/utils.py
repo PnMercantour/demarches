@@ -5,6 +5,9 @@ import psycopg as pg
 import smtplib,ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from string import Formatter
+from demarches_simpy import Dossier
+
 class EmailSender():
     def __init__(self, email:str = None, password:str = None):
         self.sender_email = os.getenv('SENDER_EMAIL', email)
@@ -50,6 +53,29 @@ def ExtractPointFromGeoJSON(geojson):
 
 def MergeGeoJSON(geojson1, geojson2):
     return {"type":"FeatureCollection","features":geojson1["features"] + geojson2["features"]}
+
+def GetAnnotationOrFieldValue(dossier : Dossier, label : str) -> str:
+    if label in dossier.get_annotations():
+        return dossier.get_annotations()[label]['stringValue']
+    for field in dossier.get_fields():
+        if field.label == label:
+            return field.stringValue
+    return ""
+
+def FormatWithDSValue(string : str, dossier : Dossier) -> str:
+    formatter = Formatter()
+    fields_name = [fn for _, fn, _, _ in Formatter().parse(string) if fn is not None]
+    knwars = {}
+    for field_name in fields_name:
+        if field_name == 'dossier_id':
+            knwars[field_name] = dossier.id
+            continue
+        elif field_name == 'dossier_number':
+            knwars[field_name] = dossier.number
+            continue
+        knwars[field_name] = GetAnnotationOrFieldValue(dossier, field_name)
+    return string.format(**knwars)
+
 
 
 def conn():
