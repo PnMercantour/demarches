@@ -4,6 +4,7 @@
 
 config.json
 test.py
+run.py
 
 # pycache
 __pycache__/

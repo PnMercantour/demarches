@@ -4,7 +4,8 @@
         "Haut Var Cians" : [],
         "Vésubie" : [],
         "Tinée" : [],
-        "Roya Bevera" : []
+        "Roya Bevera" : [],
+        "default" : []
     },    
     "email-templates": {
         "st-requesting": {

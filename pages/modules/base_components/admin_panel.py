@@ -90,7 +90,7 @@ class AdminPanel(html.Div, IBaseComponent):
         packed_actions.add_action(st_token)
 
         for region in flight.regions:
-            tos = CONFIG(f'email-route/{region}')
+            tos = CONFIG(f'email-route/{region}',CONFIG('email-route/default'))
             for to in tos:
                 with open(skeleton['body-path'],'r', encoding='utf-8') as f:
                     req = SendMailTo(self.config.data_manager,to , skeleton['subject'], f.read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
