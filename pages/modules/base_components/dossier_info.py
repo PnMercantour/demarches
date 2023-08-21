@@ -6,6 +6,8 @@ from demarches_simpy import Dossier, DossierState, Field
 
 from carto_editor import PageConfig, CONFIG
 
+from pages.modules.utils import GetAnnotationOrFieldValue
+
 from pages.modules.interfaces import *
 from pages.modules.callbacks import CustomCallback
 from pages.modules.managers.data_manager import Flight
@@ -42,7 +44,6 @@ class DossierInfo(Offcanvas, IBaseComponent):
         date = datetime.strptime(flight.get_creation_date(), "%Y-%m-%d %H:%M:%S.%f")
         human_readable_format = date.strftime("%B %d, %Y %H:%M:%S")
         fields : Field = dossier.get_fields()
-        look_for_field = lambda field_name : next((field for field in fields if  field.label == field_name), None)
 
         # 2023-07-27T11:01:44+02:00
         deposit_date_str = dossier.get_deposit_date()
@@ -64,7 +65,7 @@ class DossierInfo(Offcanvas, IBaseComponent):
             html.P(f"Region(s) : {', '.join(flight.regions)}"),
             html.P(f"Dropzone de départ: {flight.get_start_dz()} "),
             html.P(f"Dropzones :"),
-            ]+[html.P("-> "+dz) for dz in flight.get_dz()] + [ html.P(f"{field_label} : {look_for_field(field_label).stringValue}") for field_label in self.custom_fields])
+            ]+[html.P("-> "+dz) for dz in flight.get_dz()] + [ html.P(f"{field_label} : {GetAnnotationOrFieldValue(dossier, field_label)}") for field_label in self.custom_fields])
         ]
 
         

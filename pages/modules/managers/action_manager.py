@@ -7,11 +7,10 @@ if TYPE_CHECKING:
 
 
 from pages.modules.config import SecurityLevel, CONFIG,BUILD_URL
-from pages.modules.utils import PolylineToMultistring, SQL_Fetcher
+from pages.modules.utils import PolylineToMultistring, SQL_Fetcher, GetAnnotationOrFieldValue, FormatWithDSValue
 from demarches_simpy import Demarche, Dossier, DossierState, AnnotationModifier, StateModifier
 from demarches_simpy.utils import DemarchesSimpyException
 from uuid import uuid4
-import json
 
 from shapely.geometry import shape
 
@@ -464,8 +463,11 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
         ]
 
         ## Set title
-        title_raw = CONFIG('pdf/title', 'Plan de vol').format(dossier_number=dossier.get_number(), flight_uuid=flight.get_id())
-        sub_title_raw = CONFIG('pdf/subtitle', 'Dossier n°{dossier_number}').format(dossier_number=dossier.get_number(), flight_uuid=flight.get_id())
+        title_raw = CONFIG('pdf/title', 'Plan de vol')
+        title_raw = FormatWithDSValue(title_raw, dossier)
+
+        sub_title_raw = CONFIG('pdf/subtitle', 'Dossier n°{dossier_number}')
+        sub_title_raw = FormatWithDSValue(sub_title_raw, dossier)
 
         ## Set DisplayObj
         title = DisplayObj(title_raw, sub_title_raw, {'font-weight' : 'bold'})
@@ -479,9 +481,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
 
         fields = CONFIG('pdf/pdf-fields',[])
         for field_label in fields:
-            for field in dossier.get_fields():
-                if field.label == field_label:
-                    items.append(DisplayObj(field.label, field.stringValue, title_option))
+            items.append(DisplayObj(field_label, GetAnnotationOrFieldValue(dossier, field_label), title_option))
 
 
 
