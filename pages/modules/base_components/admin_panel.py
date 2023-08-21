@@ -275,7 +275,7 @@ class AdminPanel(html.Div, IBaseComponent):
                     ], className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}"+' btn-primary ', style=AdminPanel.BUTTON_STYLE, id=self.set_id('ds'), href=ds_url),
 
                 ], className=self.GROUP_CLASS),
-                test := TriggerCallbackButton(self.set_id('test'), children='test')
+                # test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
                 dbc.ModalHeader(dbc.ModalTitle("Prescription ?" if self.is_st else "Commentaire ?")),
@@ -311,9 +311,9 @@ class AdminPanel(html.Div, IBaseComponent):
             return save_flight.perform().result
 
         
-        test.add_state(self.incoming_data.get_prefix() , "data")
-        test.add_state(self.map.get_comp_edit(), "geojson")
-        test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
+        # test.add_state(self.incoming_data.get_prefix() , "data")
+        # test.add_state(self.map.get_comp_edit(), "geojson")
+        # test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
 
 
         return layout
