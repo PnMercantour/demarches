@@ -433,13 +433,13 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
             },
             {
                 "type" : "Line2D",
-                "label" : "Vol hors coeur",
+                "label" : "Itinéraire hors coeur",
                 'color':'g',
                 "ls":'--',
             },
             {
                 "type" : "Line2D",
-                "label" : "Zone en coeur",
+                "label" : "Itinéraire autorisé hors coeur",
                 'color':'r',
                 "ls":'--',
             },
