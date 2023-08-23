@@ -1,6 +1,7 @@
 from __future__ import annotations
 import dash_leaflet as dl
 from dash import html, dcc
+from dash.dependencies import Output
 import dash_bootstrap_components as dbc
 from demarches_simpy import DossierState
 
@@ -105,7 +106,7 @@ class Carte(dl.Map, IBaseComponent):
 
 
         incoming_data.set_callback(self.get_id(Carte.FILE_STATE_INFO), self.__fnc_file_state_info_init__)
-        incoming_data.set_callback([self.get_prefix(), self.get_prefix()], self.__fnc_center_on_flight__, ['center','zoom'])
+        incoming_data.set_callback([Output(self.get_prefix(), 'center', allow_duplicate=True), self.get_prefix()], self.__fnc_center_on_flight__, ['center','zoom'], prevent_initial_call=True)
         if not forceEdit:
             incoming_data.set_callback(self.get_id(Carte.EDIT_CONTROL), self.__fnc_edit_control_allow_edit__, 'draw')
         

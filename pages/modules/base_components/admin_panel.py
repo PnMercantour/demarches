@@ -8,7 +8,8 @@ if TYPE_CHECKING:
     from .incoming_data import IncomingData
     from carto_editor import PageConfig
 
-from dash import html, dcc
+from dash import html, dcc, no_update, callback, ALL
+from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
 from demarches_simpy import DossierState
@@ -18,6 +19,7 @@ from pages.modules.managers import Flight
 from pages.modules.utils import GetAttestationApercuURL, ExtractPointFromGeoJSON,MergeGeoJSON, GetDSRedirectionURL
 
 from pages.modules.interfaces import *
+from pages.modules.callbacks import SingleInputCallback
 from pages.modules.flex_components import TriggerCallbackButton
 
 
@@ -42,6 +44,7 @@ class AdminPanel(html.Div, IBaseComponent):
     LOGIN_FIELD = 'login_field'
     DIALOG_BOX = 'dialog_box'
     FORM = 'form'
+    DZ_DEFINE = 'dz_define'
 
     #MODE
     ACCEPTER_ACTION = 0
@@ -275,6 +278,9 @@ class AdminPanel(html.Div, IBaseComponent):
                     ], className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}"+' btn-primary ', style=AdminPanel.BUTTON_STYLE, id=self.set_id('ds'), href=ds_url),
 
                 ], className=self.GROUP_CLASS),
+                html.Div([
+                    dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
+                ], className=self.GROUP_CLASS),
                 test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
@@ -315,6 +321,29 @@ class AdminPanel(html.Div, IBaseComponent):
         test.add_state(self.map.get_comp_edit(), "geojson")
         test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
 
+        ## ADD DZ DEFINE CALLBACK
+        def __dz_define_init__(data):
+            #data is geojson
+            if data is None:
+                return no_update
+            #Sort data
+            data = list(filter(lambda x: x['properties']['is_temp'], data['features']))
+
+  
+            return [self.drop_zone_define_factory(self.map, dz) for dz in data]
+
+        dz_define_callback = SingleInputCallback(self.map.get_id(self.map.FEATURE_DZ), "data")
+        dz_define_callback.set_callback(self.get_id(self.DZ_DEFINE), __dz_define_init__, 'children', prevent_initial_call=False)
+        
+        ## ZOOM DZ CALLBACK
+
+        @callback(
+            Output(self.map.get_prefix(), 'center', allow_duplicate=True),
+            Input({'type': self.set_id('dz_zoom'), 'index': ALL}, 'n_clicks'),
+            prevent_initial_call=True,
+        )
+        def __tmp__(n_clicks):
+            print('test')
 
         return layout
 
@@ -347,6 +376,22 @@ class AdminPanel(html.Div, IBaseComponent):
                 return False
             else:
                 return False
+
+    def drop_zone_define_factory(self, map : Carte, feature : dict) -> dbc.DropdownMenu:
+        #check if feature is a drop zone
+        properties = feature['properties']
+        if not 'tooltip' in properties.keys() or not 'is_temp' in properties.keys():
+            return None
+
+        name = properties['tooltip']
+        layout = dbc.DropdownMenuItem(dbc.InputGroup([
+                    dbc.Button([
+                        html.I(className="bi bi-cursor-fill")
+                    ],class_name=self.BUTTON_CLASS + 'btn-primary', id= {'type' : self.set_id('dz_zoom'), 'index' : properties['id']} ),
+                    dbc.Input(type="text",value=name),
+                    dbc.Button("Définir",class_name=self.BUTTON_CLASS, color ='success'),
+                ]), header=True)
+        return layout
     @property
     def is_st(self) -> bool:
         return self.__is_st
