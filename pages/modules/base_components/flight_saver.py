@@ -21,7 +21,6 @@ from pages.modules.flex_components import TriggerCallbackButton
 
 
 
-
 class FlightSaver(TriggerCallbackButton, IBaseComponent):
     ## Style
 
@@ -65,6 +64,25 @@ class FlightSaver(TriggerCallbackButton, IBaseComponent):
         from dash import dcc, no_update
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
+
+        ## Check if there is at least 2 points and one polyline
+        if len(geojson['features']) < 3:
+            return [no_update, {'message' : 'Veuillez dessiner au moins 2 points et une ligne','type':'error'}, False]
+        
+        features = geojson['features']
+
+        points = 0
+        lines = 0
+
+        for feature in features:
+            if feature['geometry']['type'] == 'Point':
+                points += 1
+            elif feature['geometry']['type'] == 'LineString':
+                lines += 1
+
+        if points < 2 or lines < 1:
+            return [no_update,{'message' : 'Veuillez dessiner au moins 2 points et une ligne','type':'error'}, False]
+
 
         save_flight = SaveFlight(self.config.data_manager, geojson)
         create_dossier = CreatePrefilledDossier(self.config.data_manager, min_month=min_month, max_month=max_month)
