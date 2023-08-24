@@ -167,12 +167,12 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
                 markers.append(tmp.wkt)
             else:
                 lines.append(feature)
-            
-        if 'type' in lines[0]['properties'] and lines[0]['properties']['type'] == 'polyline':
-            lines = PolylineToMultistring(lines)
-        else:
-            lines = lines[0]
-        lines = shape(lines['geometry']).wkt
+        if len(lines) > 0:
+            if 'type' in lines[0]['properties'] and lines[0]['properties']['type'] == 'polyline':
+                lines = PolylineToMultistring(lines)
+            else:
+                lines = lines[0]
+            lines = shape(lines['geometry']).wkt
         return (markers, lines)
     
 
@@ -182,6 +182,9 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         dossier_id = f"'{dossier.get_id()}'" if dossier is not None else 'NULL'
         
         markers, lines = self.separate_features(self.geojson)
+
+        if(len(lines) == 0):
+            return self.trigger_error("Aucun tracé fourni")
  
         markers = list(map(lambda x: 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(x), markers))
         markers_array = 'ARRAY[' + ','.join(markers) + ']' if len(markers) > 0 else 'NULL'
