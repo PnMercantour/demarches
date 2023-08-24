@@ -7,16 +7,16 @@ window.carto = Object.assign({}, window.carto, {
     rendering: {  
         draw_drop_zone: function (feature, latlng)
         {
-            let url = `https://img.icons8.com/stickers/50/region-code.png`;
+            let url = `./assets/normal.png`;
             if(feature.properties.is_temp){
-                url = 'https://img.icons8.com/stickers/50/bookmark-ribbon.png'
+                url = './assets/temp.png'
             }
             const flag = L.icon({iconUrl: url, iconSize: [35, 35]});
             return L.marker(latlng, {icon: flag});
         },
         draw_cluster_drop_zone: function (feature, latlng)
         {
-            const flag = L.icon({iconUrl: `https://img.icons8.com/stickers/100/full-stop.png`, iconSize: [35, 35]});
+            const flag = L.icon({iconUrl: `./assets/cluster.png`, iconSize: [35, 35]});
             return L.marker(latlng, {icon: flag});
         },
         flight_style: function(feature, context){
