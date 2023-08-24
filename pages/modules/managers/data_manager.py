@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from demarches_simpy import Dossier, DossierState, Profile
+from demarches_simpy.utils import DemarchesSimpyException
 import os
 from pages.modules.utils import SQL_Fetcher
 from pages.modules.interfaces import ISecurityManager
@@ -188,6 +189,14 @@ class DataManager(SQL_Fetcher):
         if uuid == None:
             return False
         return self.get_flight_by_uuid(uuid) != None
+
+    def is_dossier_exist(self, dossier_id : str) -> bool:
+        try:
+            file = self.get_dossier_by_id(dossier_id) 
+            file.fetch()
+            return file!= None
+        except DemarchesSimpyException:
+            return False
 
     def get_last_flight_by_dossier(self, dossier: Dossier) -> Flight:
         if not dossier in self.dossier_linked_to_last_flight:
