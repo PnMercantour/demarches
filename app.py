@@ -44,7 +44,7 @@ app.layout = html.Div([
     # #Main content
     html.Div(id='page-content',children=dash.page_container),
     #Footer with white back ground, rounded corners and shadow
-    dbc.Container("Author : X", class_name='h4 bg-secondary text-dark text-center align-item-center', style={'height':'5vh'},fluid=True)
+    dbc.Container("Parc National du Mercantour - Tous droits réservés.", class_name='h4 bg-secondary text-dark text-center align-item-center', style={'height':'5vh'},fluid=True)
 ])
 
 import os
