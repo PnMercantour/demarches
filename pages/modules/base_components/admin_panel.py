@@ -42,6 +42,7 @@ class AdminPanel(html.Div, IBaseComponent):
     LOGIN_FIELD = 'login_field'
     DIALOG_BOX = 'dialog_box'
     FORM = 'form'
+    PANEL_DATA = 'panel_data'
 
     #MODE
     ACCEPTER_ACTION = 0
@@ -52,8 +53,14 @@ class AdminPanel(html.Div, IBaseComponent):
 
 
     def process_connection(self, data, email, password):
+        from pages.modules.managers import STSecurity
         uuid = data['uuid']
         st_token = data['st_token']
+        self.is_st = 'st_token' in data and data['st_token'] != None
+        if self.is_st:
+            self.__security_manager = STSecurity(self.config.data_manager)
+        else:
+            self.__security_manager = self.config.security_manager ## AdminSecurity
         self.security_manager.login({
                 'uuid':uuid,
                 'email':email,
@@ -213,12 +220,13 @@ class AdminPanel(html.Div, IBaseComponent):
             return [self.security_manager.perform_action(packed_actions),True]
         return __tmp__
     ## REDIRECT THE ACTION TRIGGERED BY THE SAME SUBMIT BUTTON WHICH IS THE BUTTON IN THE DIALOG BOX
-    def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected):
-        if self.mode == self.ACCEPTER_ACTION:
+    def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected, panel_data):
+        mode = panel_data['mode']
+        if mode == self.ACCEPTER_ACTION:
             return self.build_fnc_finalized_state(DossierState.ACCEPTE)(self, data, geojson, email, password, avis, selected)
-        elif self.mode == self.REFUSER_ACTION:
+        elif mode == self.REFUSER_ACTION:
             return self.build_fnc_finalized_state(DossierState.REFUSE)(self, data, geojson, email, password, avis, selected)
-        elif self.mode == self.SUBMIT_ACTION:
+        elif mode == self.SUBMIT_ACTION:
             return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis, selected)
 
 
@@ -257,6 +265,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
         ## BUILD THE LAYOUT
         layout = html.Div([
+            dcc.Store(id=self.set_id(AdminPanel.PANEL_DATA), storage_type='session', data={'mode':None}),
             dbc.InputGroup([
                 html.Div([
                     dbc.Input(type="email", placeholder="Instructeur Email", className=f"{is_hidden(disabled_block)} {self.FIELD_CLASS}",style=AdminPanel.FIELD_STYLE, disabled=disabled_block, id=self.set_id(AdminPanel.F_EMAIL)),
@@ -296,6 +305,7 @@ class AdminPanel(html.Div, IBaseComponent):
         submit_button.add_state(self.get_id(self.F_PASSWORD), "value")
         submit_button.add_state(self.get_id(self.F_AVIS), "value")
         submit_button.add_state(SELECTOR.get_prefix(), "data")
+        submit_button.add_state(self.get_id(self.PANEL_DATA), "data")
         submit_button.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()] , self.__fnc_submit_trigger__, ['data','hidden'], prevent_initial_call=True)
 
         ## ADD TEST CALLBACK
@@ -327,26 +337,28 @@ class AdminPanel(html.Div, IBaseComponent):
 
         ## INIT DIALOG
         @callback(
-        Output(self.get_id(AdminPanel.DIALOG_BOX), 'is_open'),
+        [Output(self.get_id(AdminPanel.DIALOG_BOX), 'is_open'), Output(self.get_id(self.PANEL_DATA), 'data',allow_duplicate=True)],
         [Input(self.get_id(AdminPanel.B_TRIGGER_DIALOG),'n_clicks'), Input(self.get_id(AdminPanel.B_CANCEL),'n_clicks'), Input(self.get_id(AdminPanel.B_ACCEPTER),'n_clicks'), Input(self.get_id(AdminPanel.B_REFUSER),'n_clicks'), Input(self.get_id(AdminPanel.B_SUBMIT),'n_clicks')],
+        State(self.get_id(self.PANEL_DATA), 'data'),
         prevent_initial_call=True,
         )
         def __set__(*args):
+            data = args[-1]
             if args[0] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_TRIGGER_DIALOG):
-                self.mode = AdminPanel.SUBMIT_ACTION
-                return True
+                data.update({'mode':AdminPanel.SUBMIT_ACTION})
+                return [True, data]
             elif args[2] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_ACCEPTER):
-                self.mode = AdminPanel.ACCEPTER_ACTION
-                return True
+                data.update({'mode':AdminPanel.ACCEPTER_ACTION})
+                return [True, data]
             elif args[3] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_REFUSER):
-                self.mode = AdminPanel.REFUSER_ACTION
-                return True
+                data.update({'mode':AdminPanel.REFUSER_ACTION})
+                return [True, data]
             elif args[1] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_CANCEL):
-                return False
+                return [False, no_update]
             elif args[4] is not None and ctx.triggered_id == self.get_id(AdminPanel.B_SUBMIT):
-                return False
+                return [False, no_update]
             else:
-                return False
+                return [no_update, no_update]
     @property
     def is_st(self) -> bool:
         return self.__is_st
