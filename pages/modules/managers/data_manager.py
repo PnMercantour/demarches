@@ -138,7 +138,7 @@ class DataManager(SQL_Fetcher):
                 print(resp['message'])
             self.flight_cache[uuid] = None
             return
-        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][5], resp[0][6])
+        self.flight_cache[uuid] = Flight(self, resp[0][0], resp[0][1], resp[0][2], resp[0][3], resp[0][4])
 
     def __fetch_dossier__(self, id: str):
         resp = self.fetch_sql(sql_request="SELECT dossier_id, dossier_number FROM survol.dossier WHERE dossier_id = %s", request_args=[id])
