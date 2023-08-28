@@ -281,7 +281,10 @@ class AdminPanel(html.Div, IBaseComponent):
                 html.Div([
                     dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
                 ], className=self.GROUP_CLASS),
-                test := TriggerCallbackButton(self.set_id('test'), children='test')
+                html.Div([
+                    dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
+                ], className=self.GROUP_CLASS),
+                # test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
                 dbc.ModalHeader(dbc.ModalTitle("Prescription ?" if self.is_st else "Commentaire ?")),
@@ -317,9 +320,9 @@ class AdminPanel(html.Div, IBaseComponent):
             return save_flight.perform().result
 
         
-        test.add_state(self.incoming_data.get_prefix() , "data")
-        test.add_state(self.map.get_comp_edit(), "geojson")
-        test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
+        # test.add_state(self.incoming_data.get_prefix() , "data")
+        # test.add_state(self.map.get_comp_edit(), "geojson")
+        # test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
 
         ## ADD DZ DEFINE CALLBACK
         def __dz_define_init__(data):
