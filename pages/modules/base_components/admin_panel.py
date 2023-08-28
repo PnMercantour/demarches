@@ -279,7 +279,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
                 ], className=self.GROUP_CLASS),
                 html.Div([
-                    dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
+                    dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}", style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
                 ], className=self.GROUP_CLASS),
                 # test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
