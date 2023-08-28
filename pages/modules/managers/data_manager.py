@@ -13,14 +13,19 @@ class DataCache():
         self.features = {}
         print("DataCache created")
     
+    def reset_feature(self, feature_name : str, security : ISecurityManager):
+        if feature_name in self.features:
+            del self.features[feature_name]
+        self.get_feature(feature_name, security)
 
     def get_feature(self, feature_name : str, security : ISecurityManager) -> any:
         from pages.modules.managers import FeatureFetching
 
         if feature_name not in self.features:
-            self.features[feature_name] = FeatureFetching(security.get_data_ctx(), feature_name)
-            security.perform_action(self.features[feature_name])
-        return security.action_result(self.features[feature_name])
+            fetching = FeatureFetching(security.get_data_ctx(), feature_name)
+            self.features[feature_name] = security.perform_action(fetching)
+
+        return self.features[feature_name]
 
 
 

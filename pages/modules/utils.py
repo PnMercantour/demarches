@@ -104,11 +104,14 @@ class SQL_Fetcher():
                 request = file.read()
                 file.close()
 
+            self.CONN = conn()
             with self.CONN.cursor() as cursor:
                 cursor.execute(request, request_args)
                 
                 if commit:
                     self.CONN.commit()
+                    self.CONN.close()
+                    
 
                 print('SQL REQUESTED ')
                 verbose_sql = os.getenv('VERBOSE_SQL', 'False').lower() in ['true', '1', 't', 'y', 'yes']
@@ -119,5 +122,6 @@ class SQL_Fetcher():
 
         except psycopg.Error as e:
             self.CONN.rollback()
+            print(f"SQL ERROR {str(e)}")
             return {"message": f"SQL ERROR {str(e)}", "type":"error"}
 

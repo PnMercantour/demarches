@@ -14,7 +14,7 @@ import dash_bootstrap_components as dbc
 
 from demarches_simpy import DossierState
 
-from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR, BUILD_URL
+from carto_editor import APP_INFO_BOX, LOADING_BOX, CONFIG, SELECTOR, BUILD_URL, CACHE
 from pages.modules.managers import Flight
 from pages.modules.utils import GetAttestationApercuURL, ExtractPointFromGeoJSON,MergeGeoJSON, GetDSRedirectionURL
 
@@ -281,9 +281,6 @@ class AdminPanel(html.Div, IBaseComponent):
                 html.Div([
                     dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
                 ], className=self.GROUP_CLASS),
-                html.Div([
-                    dbc.DropdownMenu(label = "Drop Zones", children=[], class_name=self.BUTTON_CLASS, style=self.BUTTON_STYLE, id = self.set_id(self.DZ_DEFINE)),
-                ], className=self.GROUP_CLASS),
                 # test := TriggerCallbackButton(self.set_id('test'), children='test')
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
@@ -323,6 +320,7 @@ class AdminPanel(html.Div, IBaseComponent):
         # test.add_state(self.incoming_data.get_prefix() , "data")
         # test.add_state(self.map.get_comp_edit(), "geojson")
         # test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
+        from dash import callback_context as ctx
 
         ## ADD DZ DEFINE CALLBACK
         def __dz_define_init__(data):
@@ -337,17 +335,10 @@ class AdminPanel(html.Div, IBaseComponent):
 
         dz_define_callback = SingleInputCallback(self.map.get_id(self.map.FEATURE_DZ), "data")
         dz_define_callback.set_callback(self.get_id(self.DZ_DEFINE), __dz_define_init__, 'children', prevent_initial_call=False)
+    
+
+    
         
-        ## ZOOM DZ CALLBACK
-
-        @callback(
-            Output(self.map.get_prefix(), 'center', allow_duplicate=True),
-            Input({'type': self.set_id('dz_zoom'), 'index': ALL}, 'n_clicks'),
-            prevent_initial_call=True,
-        )
-        def __tmp__(n_clicks):
-            print('test')
-
         return layout
 
 
@@ -379,6 +370,68 @@ class AdminPanel(html.Div, IBaseComponent):
                 return False
             else:
                 return False
+        ## DROP ZONE ADD CALLBACK
+        @callback(
+                Output(self.map.get_prefix(), 'center', allow_duplicate=True),
+                Input({'type': self.set_id('dz_zoom'), 'index': ALL}, 'n_clicks'),
+                State({'type': self.set_id('dz_data'), 'index': ALL}, 'data'),
+                prevent_initial_call=True,
+            )
+        def __tmp__(n_clicks, features):
+            # research the feature
+            if(ctx.triggered_id == None):
+                return no_update
+            id = ctx.triggered_id['index']
+            
+            feature = list(filter(lambda x: x['properties']['id'] == id, features))[0]
+            #get the index
+            i = features.index(feature)
+            n_click = n_clicks[i]
+
+            if n_click is None or n_click == 0:
+                return no_update
+            if feature is None:
+                return no_update
+
+            (x,y) = feature['geometry']['coordinates']
+            return [y,x]
+
+        @callback(
+            [APP_INFO_BOX.get_output(), Output(self.map.get_id(self.map.FEATURE_DZ), 'data')],
+            Input({"type":self.set_id('dz_define'), "index" : ALL}, 'n_clicks'),
+            [
+                State({"type":self.set_id('dz_data'), "index" : ALL}, 'data'),
+                State({"type":self.set_id('dz_input'), "index" : ALL}, 'value'),
+                State(self.get_id(self.F_EMAIL), 'value'),
+                State(self.get_id(self.F_PASSWORD), 'value'),
+                State(self.incoming_data.get_prefix(), 'data')
+            ],
+            prevent_initial_call=True)
+        def __dz_define__(n_clicks, features, inputs, email, password, data):
+            from pages.modules.managers.action_manager import SaveDropZone
+            if(ctx.triggered_id == None):
+                return no_update
+
+            id = ctx.triggered_id['index']
+            feature = list(filter(lambda x: x['properties']['id'] == id, features))[0]
+            #get the index
+            i = features.index(feature)
+            n_click = n_clicks[i]
+            feature_input = inputs[i]
+
+            if n_click is None or n_click == 0:
+                return no_update
+            if feature is None:
+                return no_update
+            
+            self.security_manager.login({"email": email, "password":password,'uuid':data['uuid']})
+
+            save = SaveDropZone(self.config.data_manager, feature['properties']['id'], feature_input)
+            resp = self.security_manager.perform_action(save)
+            if not save.is_error:
+                CACHE.reset_feature('drop_zone', self.security_manager)
+            return [resp, CACHE.get_feature('drop_zone', self.security_manager)]
+
 
     def drop_zone_define_factory(self, map : Carte, feature : dict) -> dbc.DropdownMenu:
         #check if feature is a drop zone
@@ -391,8 +444,9 @@ class AdminPanel(html.Div, IBaseComponent):
                     dbc.Button([
                         html.I(className="bi bi-cursor-fill")
                     ],class_name=self.BUTTON_CLASS + 'btn-primary', id= {'type' : self.set_id('dz_zoom'), 'index' : properties['id']} ),
-                    dbc.Input(type="text",value=name),
-                    dbc.Button("Définir",class_name=self.BUTTON_CLASS, color ='success'),
+                    dcc.Store(id={'type' : self.set_id('dz_data'), 'index' : properties['id']}, data=feature),
+                    dbc.Input(type="text",id={'type' : self.set_id('dz_input'), 'index' : properties['id']},value=name),
+                    dbc.Button("Définir",id={'type' : self.set_id('dz_define'), "index": properties['id']}, class_name=self.BUTTON_CLASS, color ='success'),
                 ]), header=True)
         return layout
     @property

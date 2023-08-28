@@ -646,6 +646,21 @@ class SaveNewTemplate(IPackedAction, SQL_Fetcher):
         
         return self.trigger_success("Template saved")
 
+class SaveDropZone(IAction,SQL_Fetcher):
+    def __init__(self, data_manager: DataManager, dz_uuid : str, dz_label : str) -> None:
+        super().__init__(data_manager, SecurityLevel.AUTH)
+        self.dz_uuid = dz_uuid
+        self.dz_label = dz_label
+        SQL_Fetcher.__init__(self)
+
+
+    def perform(self) -> any:
+        resp = self.fetch_sql(sql_request='UPDATE survol.drop_zones SET label=%s, is_temp=false WHERE id=%s RETURNING id', request_args=[self.dz_label, self.dz_uuid], commit=True)
+
+        if self.is_sql_error(resp):
+            return self.trigger_error(resp['message'])
+
+        return self.trigger_success("Drop zone saved")
 
 
 
