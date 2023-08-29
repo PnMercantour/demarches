@@ -47,6 +47,7 @@ VERBOSE_SQL=0
 HOST="http://localhost:8050"
 
 # Mail
+SMTP_SERVER='ssl0.ovh.net'
 SENDER_EMAIL='no_reply@ext.com'
 SENDER_PASSWORD='123456'
 ```
@@ -65,6 +66,7 @@ SENDER_PASSWORD='123456'
 | `HOST`            | URL de l'application (Uniquement pour la creation de lien dans les mails, la vrai root se fait au lancement de l'application)                      |
 | `SENDER_EMAIL`    | Adresse mail de l'expéditeur des mails                                                                                                             |
 | `SENDER_PASSWORD` | Mot de passe de l'expéditeur des mails                                                                                                             |
+| `SMTP_SERVER`     | Serveur SMTP pour l'envoi des mails                                                                                                                |
 
 
 ## Lancement
