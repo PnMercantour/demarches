@@ -5,6 +5,7 @@
 config.json
 test.py
 run.py
+gunicorn.conf.py
 
 # pycache
 __pycache__/
