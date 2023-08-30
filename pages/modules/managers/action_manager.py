@@ -259,10 +259,6 @@ class SetAnnotation(IPackedAction):
             self.trigger_error("Wrong annotation label")
             return False
         
-        if self.dossier.get_annotations()[self.annotation_label] != None and self.dossier.get_annotations()[self.annotation_label]['stringValue'] != "":
-            self.trigger_error("Annotation already set : "+self.dossier.get_annotations()[self.annotation_label]['stringValue'])
-            return False
-        
         return True
 
     def perform(self, **kwargs) -> any:

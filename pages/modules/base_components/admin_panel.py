@@ -111,7 +111,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
     ## FONCTION HANDLING THE PRESCRIPTION SEND BY THE ST
     def __fnc_st_prescription_trigger__(self, data, packed_actions, avis, uuid, dossier):
-        from pages.modules.managers import SendMailTo, SetAnnotation
+        from pages.modules.managers import SendMailTo, SetAnnotation, DeleteSTToken
         from pages.modules.config import CONFIG
 
         #Get the correct message skeleton from config
@@ -119,12 +119,15 @@ class AdminPanel(html.Div, IBaseComponent):
         min_month = data['min_month'] if 'min_month' in data else 6
         max_month = data['max_month'] if 'max_month' in data else 8
         url =  BUILD_URL('admin?uuid={flight_id}&min_month={min_month}&max_month={max_month}').format(flight_id=uuid,min_month=min_month,max_month=max_month)
+        delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
         with open(skeleton['body-path'],'r', encoding='utf-8') as f:
             st_prescription = SendMailTo(self.config.data_manager,dossier.get_attached_instructeurs_info()[0]['email'],skeleton['subject'],f.read(), prescription=avis,url=url)
         set_annotation = SetAnnotation(self.config.data_manager, dossier, avis, CONFIG("label-field/st-prescription"))
 
         packed_actions.add_action(set_annotation)
         packed_actions.add_action(st_prescription)
+        packed_actions.add_action(delete_st_token)
+
 
         return [self.security_manager.perform_action(packed_actions),True]
     
@@ -191,7 +194,7 @@ class AdminPanel(html.Div, IBaseComponent):
             ## Check if the geojson fetched by the edit component is valid, if not, it means there is no new flight edited by the user
             new_flight = saving_flight.precondition()
 
-            delete_st_token = DeleteSTToken(self.config.data_manager, dossier)
+
             add_pdf_url_to_dossier = SetAnnotation(self.config.data_manager, dossier, pdf_url, CONFIG("label-field/flight-pdf-url", "plan-de-vol"))
             change_dossier_state = ChangeDossierState(self.config.data_manager, dossier, state)
             build_pdf = BuildPdf(self.config.data_manager, dossier, flight, months)
@@ -210,7 +213,7 @@ class AdminPanel(html.Div, IBaseComponent):
                 final_geojson = Flight.build_complete_geojson(new_flight)
                 packed_actions.add_action(SaveFlight(self.config.data_manager, final_geojson, dossier, new_flight.get_id() if new_flight.is_template() else None))
 
-            packed_actions.add_action(delete_st_token)
+
             if state == DossierState.ACCEPTE:
                 packed_actions.add_action(save_new_template).add_action(add_pdf_url_to_dossier).add_action(change_dossier_state).add_action(build_pdf)
             else:
@@ -257,8 +260,9 @@ class AdminPanel(html.Div, IBaseComponent):
         if self.config.data_manager.is_flight_uuid_valid(uuid):
             flight = self.config.data_manager.get_flight_by_uuid(uuid)
             dossier = flight.get_attached_dossier() 
+            already_token = self.config.data_manager.is_st_token_already_exists(dossier)
             disabled_block = self.is_st or self.config.data_manager.is_file_closed(dossier)
-            disabled_submit = (self.config.data_manager.is_st_token_already_exists(dossier) and not self.is_st) or self.config.data_manager.is_file_closed(dossier)
+            disabled_submit = (already_token and not self.is_st) or (not already_token and self.is_st) or self.config.data_manager.is_file_closed(dossier)
             attestation_url = GetAttestationApercuURL(os.getenv('DEMARCHE_NUMBER', 000000), dossier.get_number())
             ds_url = GetDSRedirectionURL(os.getenv('DEMARCHE_NUMBER', 000000), dossier.get_number())
         st_label = "Avis ST" if not self.is_st else "Valider"
