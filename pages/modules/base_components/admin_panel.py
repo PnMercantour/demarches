@@ -49,6 +49,18 @@ class AdminPanel(html.Div, IBaseComponent):
 
 
 
+    def __init__(self,pageConfig: PageConfig, map: Carte, incoming_data : IncomingData):
+        self.is_st = False
+        self.incoming_data = incoming_data
+        self.map = map
+        IBaseComponent.__init__(self, pageConfig)
+        html.Div.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__(), className=self.__get_root_class__())
+
+        
+        self.set_internal_callback()
+        incoming_data.set_callback(self.get_prefix(), self.__fnc_init__, "children")
+
+
 
     def process_connection(self, data, email, password):
         from pages.modules.managers import STSecurity
@@ -79,7 +91,7 @@ class AdminPanel(html.Div, IBaseComponent):
         return self.__get_layout__(data['uuid'])
 
 
-    ## FONCTION HANDLING THE PRESCRIPTION REQUEST FOR THE ST
+    ## FONCTION HANDLING WHEN INSTRUCTOR IS REQUESTING A ST PRESCRIPTION
     def __fnc_st_request_trigger__(self, data, packed_actions, avis, uuid, dossier):
         from pages.modules.managers import GenerateSTToken, SendMailTo
         from pages.modules.config import CONFIG
@@ -101,13 +113,9 @@ class AdminPanel(html.Div, IBaseComponent):
                     req = SendMailTo(self.config.data_manager,to , skeleton['subject'], f.read(), avis=avis, url=url, min_month=min_month, max_month=max_month)
                 packed_actions.add_action(req)
 
-
-
-
-
         return [self.security_manager.perform_action(packed_actions),True]
 
-    ## FONCTION HANDLING THE PRESCRIPTION SEND BY THE ST
+    ## FONCTION HANDLING WHEN THE ST IS SENDING A PRESCRIPTION
     def __fnc_st_prescription_trigger__(self, data, packed_actions, avis, uuid, dossier):
         from pages.modules.managers import SendMailTo, SetAnnotation, DeleteSTToken
         from pages.modules.config import CONFIG
@@ -129,7 +137,7 @@ class AdminPanel(html.Div, IBaseComponent):
 
         return [self.security_manager.perform_action(packed_actions),True]
     
-    ## FUNCTION WHICH TAKE THE SAME BUTTON INPUT AND REDIRECT IF IT'S THE ST OR THE INSTRUCT WHICH TRIGGERED THE ACTION
+    ## FUNCTION WHICH TAKE THE SAME BUTTON SUBMIT BUTTON (AVIS ST OR VALIDER) INPUT AND REDIRECT IF IT'S THE ST OR THE INSTRUCTOR WHICH TRIGGERED THE ACTION
     def __fnc_st_redirection_trigger__(self, data, geojson, email, password, avis, selected):
         from pages.modules.managers import PackedActions, SaveFlight
 
@@ -159,12 +167,15 @@ class AdminPanel(html.Div, IBaseComponent):
             packed_actions.add_action(SaveFlight(self.config.data_manager, final_geojson, dossier, new_flight.get_id() if new_flight.is_template() else None))
 
 
+        # REDIRECTION TO THE CORRECT FUNCTION
         if not self.is_st:
             return self.__fnc_st_request_trigger__(data, packed_actions, avis, uuid, dossier)
         else:
             return self.__fnc_st_prescription_trigger__(data, packed_actions, avis, uuid, dossier)
-    ### RETURN THE TMP FUNCTION AS THE CALLBACK WHICH WILL BE BUILT IN FUNCTION OF THE STATE (AVOID REDUNDANCY)
-    def build_fnc_finalized_state(self, data, geojson, email, password, avis, selected):
+
+
+    ### FUNCTION HANDLING WHEN THE INSTRUCTOR IS REQUESTING THE DIRECTION INSPECTION
+    def fn_finalized(self, data, geojson, email, password, avis, selected):
         from pages.modules.managers import PackedActions, SaveFlight, SetAnnotation, SendMailTo, BuildPdf, DeleteSTToken, ChangeDossierState, SaveNewTemplate
         from pages.modules.config import CONFIG
 
@@ -182,7 +193,6 @@ class AdminPanel(html.Div, IBaseComponent):
 
         packed_actions = PackedActions(self.config.data_manager, start_values={'uuid' : uuid}, verbose=True)
 
-        # Common Actions
         saving_flight = SaveFlight(self.config.data_manager, geojson, dossier)
 
         ## Check if the geojson fetched by the edit component is valid, if not, it means there is no new flight edited by the user
@@ -223,21 +233,9 @@ class AdminPanel(html.Div, IBaseComponent):
     def __fnc_submit_trigger__(self, data, geojson, email, password, avis, selected, panel_data):
         mode = panel_data['mode']
         if mode == self.ACCEPTER_ACTION:
-            return self.build_fnc_finalized_state(data, geojson, email, password, avis, selected)
+            return self.fn_finalized(data, geojson, email, password, avis, selected)
         elif mode == self.SUBMIT_ACTION:
             return self.__fnc_st_redirection_trigger__(data, geojson, email, password, avis, selected)
-
-
-    def __init__(self,pageConfig: PageConfig, map: Carte, incoming_data : IncomingData):
-        self.is_st = False
-        self.incoming_data = incoming_data
-        self.map = map
-        IBaseComponent.__init__(self, pageConfig)
-        html.Div.__init__(self, children=self.__get_layout__(), id=self.get_prefix(), style=self.__get_root_style__(), className=self.__get_root_class__())
-
-        
-        self.set_internal_callback()
-        incoming_data.set_callback(self.get_prefix(), self.__fnc_init__, "children")
 
 
 
@@ -282,7 +280,7 @@ class AdminPanel(html.Div, IBaseComponent):
                     ], className=f"{is_hidden(disabled_block)} {self.BUTTON_CLASS}"+' btn-primary ', style=AdminPanel.BUTTON_STYLE, id=self.set_id('ds'), href=ds_url),
 
                 ], className=self.GROUP_CLASS),
-                # test := TriggerCallbackButton(self.set_id('test'), children='test')
+                # test := TriggerCallbackButton(self.set_id('test'), children='test')  #REACTIVATE TO TEST
             ],id=self.set_id(AdminPanel.FORM)),
             dbc.Modal([
                 dbc.ModalHeader(dbc.ModalTitle("Prescription ?" if self.is_st else "Commentaire ?")),
@@ -306,6 +304,8 @@ class AdminPanel(html.Div, IBaseComponent):
         submit_button.add_state(self.get_id(self.PANEL_DATA), "data")
         submit_button.set_callback([APP_INFO_BOX.get_output(), LOADING_BOX.get_output()] , self.__fnc_submit_trigger__, ['data','hidden'], prevent_initial_call=True)
 
+
+        ##----------------- TEST BUTTON TO MAKE STUFF-----------------
         ## ADD TEST CALLBACK
         def __test__(data, geojson):
             from pages.modules.managers.action_manager import SaveFlight
@@ -323,6 +323,7 @@ class AdminPanel(html.Div, IBaseComponent):
         # test.add_state(self.map.get_comp_edit(), "geojson")
         # test.set_callback(APP_INFO_BOX.get_output() , __test__, 'data', prevent_initial_call=True)
 
+        #----------------------------------------------------------------
 
         return layout
 
@@ -333,7 +334,7 @@ class AdminPanel(html.Div, IBaseComponent):
         from dash import callback_context as ctx
         from dash.dependencies import Input, Output, State
 
-        ## INIT DIALOG
+        ## ALL BUTTON INPUT IS TRIGGERING THE DIALOG AND SETTING THE MODE IN A SESSION STORE DATA
         @callback(
         [Output(self.get_id(AdminPanel.DIALOG_BOX), 'is_open'), Output(self.get_id(self.PANEL_DATA), 'data',allow_duplicate=True)],
         [Input(self.get_id(AdminPanel.B_TRIGGER_DIALOG),'n_clicks'), Input(self.get_id(AdminPanel.B_CANCEL),'n_clicks'), Input(self.get_id(AdminPanel.B_ACCEPTER),'n_clicks'), Input(self.get_id(AdminPanel.B_SUBMIT),'n_clicks')],
