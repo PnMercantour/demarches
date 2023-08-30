@@ -13,7 +13,7 @@ class EmailSender():
         self.sender_email = os.getenv('SENDER_EMAIL', email)
         self.password = os.getenv('SENDER_PASSWORD', password)
         self.port = 465
-        self.smtp_server = "mail.espaces-naturels.fr"
+        self.smtp_server = os.getenv('SMTP_SERVER', "sll0.ovh.net")
 
     def send(self, to:str, subject:str, message:str):
         msg = MIMEMultipart()

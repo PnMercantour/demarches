@@ -47,6 +47,7 @@ VERBOSE_SQL=0
 HOST="http://localhost:8050"
 
 # Mail
+SMTP_SERVER='ssl0.ovh.net'
 SENDER_EMAIL='no_reply@ext.com'
 SENDER_PASSWORD='123456'
 ```
@@ -65,6 +66,7 @@ SENDER_PASSWORD='123456'
 | `HOST`            | URL de l'application (Uniquement pour la creation de lien dans les mails, la vrai root se fait au lancement de l'application)                      |
 | `SENDER_EMAIL`    | Adresse mail de l'expéditeur des mails                                                                                                             |
 | `SENDER_PASSWORD` | Mot de passe de l'expéditeur des mails                                                                                                             |
+| `SMTP_SERVER`     | Serveur SMTP pour l'envoi des mails                                                                                                                |
 
 
 ## Lancement
@@ -102,7 +104,8 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
         "Tinée" : [],
         "Roya Bevera" : [],
         "default" : []
-    },    
+    },
+    "admin-emails" : [],
     "email-templates": {
         "st-requesting": {
             "subject": "Validation ST dossier n°{dossier_number}",
@@ -112,13 +115,9 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
             "subject": "Prescription ST dossier n°{dossier_number}",
             "body-path": "./email-templates/st-prescription.txt"
         },
-        "dossier-accepted":{
-            "subject": "Dossier n°{dossier_number} accepté",
-            "body-path": "./email-templates/dossier-accepted.txt"
-        },
-        "dossier-rejected":{
-            "subject": "Dossier n°{dossier_number} refusé",
-            "body-path": "./email-templates/dossier-rejected.txt"
+        "dossier-admin": {
+            "subject": "Dossier n°{dossier_number} inspection",
+            "body-path": "./email-templates/dossier-admin.txt"
         }
     },
     "pdf" : {
@@ -150,5 +149,6 @@ Remplacer `custom` et `custom` par les valeurs souhaitées
 | `pdf-template`      | Nom du template de pdf à utiliser qui est le nom du fichier html et css présent dans le dossier `pdf-templates`, pour rajouter votre propre squelette, rajouter les dans ce dossier avec le même nom pour le css et html                                    |
 | `title`             | Titre du pdf                          (peut être formatté)                                                                                                                                                                                                  |
 | `subtitle`          | Sous-titre du pdf (peut être formatté )                                                                                                                                                                                                                     |
+| `admin-emails`      |  Liste des adresses mail dont le mail d'inspection par la direction sera envoyé à.                                                                                                                                                                                        |
 
 
