@@ -1,0 +1,13 @@
+Demande de validation pour le dossier n°{dossier_id}
+
+    Vous trouverez ci-joint le plan de vol, ainsi que l'attestation téléchargeable.
+
+    Remarque envoyé au pétitionnaire : {avis}
+
+    Plan de vol : {pdf_url}
+    Attestation : {attestation_url}
+
+    Veuillez accepter le dossier sur démarches simplifiées via le lien suivant :
+    {ds_url}
+
+    [Ce message est généré automatiquement, merci de ne pas y répondre]
