@@ -6,7 +6,8 @@
         "Tinée" : [],
         "Roya Bevera" : [],
         "default" : []
-    },    
+    },
+    "admin-emails" : [],
     "email-templates": {
         "st-requesting": {
             "subject": "Validation ST dossier n°{dossier_number}",
@@ -16,13 +17,9 @@
             "subject": "Prescription ST dossier n°{dossier_number}",
             "body-path": "./email-templates/st-prescription.txt"
         },
-        "dossier-accepted":{
-            "subject": "Dossier n°{dossier_number} accepté",
-            "body-path": "./email-templates/dossier-accepted.txt"
-        },
-        "dossier-rejected":{
-            "subject": "Dossier n°{dossier_number} refusé",
-            "body-path": "./email-templates/dossier-rejected.txt"
+        "dossier-admin": {
+            "subject": "Dossier n°{dossier_number} inspection",
+            "body-path": "./email-templates/dossier-admin.txt"
         }
     },
     "pdf" : {
