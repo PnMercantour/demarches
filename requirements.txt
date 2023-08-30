@@ -1,6 +1,5 @@
--i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple
-demarches-simpy==0.0.14
-PrintMyReport==0.0.9
+demarches-simpy==0.0.18
+https://github.com/Z3ZEL/print-my-report/releases/download/0.1.0/PrintMyReport-0.1.0.tar.gz
 python-dotenv
 dash>=2.6.1
 dash-leaflet==0.1.23

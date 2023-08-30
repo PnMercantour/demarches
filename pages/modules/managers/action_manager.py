@@ -481,7 +481,7 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
 
 
 
-        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH'))
+        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH'), dpi=200, base_map_params = {'alpha':0.75})
         printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema=f'./pdf-templates/{CONFIG("pdf/pdf-template","vol_mercantour")}')
 
 
