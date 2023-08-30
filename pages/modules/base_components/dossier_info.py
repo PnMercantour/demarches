@@ -43,7 +43,7 @@ class DossierInfo(Offcanvas, IBaseComponent):
         ## 2023-08-01 14:21:43.366299
         date = datetime.strptime(flight.get_creation_date(), "%Y-%m-%d %H:%M:%S.%f")
         human_readable_format = date.strftime("%B %d, %Y %H:%M:%S")
-        fields : Field = dossier.get_fields()
+        fields : Field = dossier.force_fetch().get_fields()
 
         # 2023-07-27T11:01:44+02:00
         deposit_date_str = dossier.get_deposit_date()
