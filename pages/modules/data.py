@@ -6,6 +6,7 @@ from pages.modules.global_components.flight_selector import FlightSelector
 
 from pages.modules.managers.data_manager import DataCache, DataManager
 
+from dash import no_update
 import psycopg as pg
 import os
 
@@ -25,13 +26,19 @@ class BuiltInCallbackFnc():
     def __init__(self, data_manager):
         self.data_manager = data_manager
     
+
+
     def flight_fetch(self, data):
         '''Need a IncomingData object as an Input of the callback, Return the geojson and an output message'''
 
         from pages.modules.managers.data_manager import Flight
         flight = self.data_manager.get_flight_by_uuid(data['uuid'])
         if flight == None:
-            return [None, APP_INFO_BOX.build_message("Flight not found", 'error')]
+            return [None, APP_INFO_BOX.build_message("Flight not found", 'error'), no_update]
+
+        if not DATA_MANAGER.is_dossier_exist(flight.get_dossier_id()):
+            return [None, APP_INFO_BOX.build_message("Le dossier attaché au survol n'existe pas", 'error'), no_update]
+
         flight = flight.get_last_flight()
 
 
@@ -41,9 +48,12 @@ class BuiltInCallbackFnc():
         from pages.modules.managers.data_manager import Flight
         flight = self.data_manager.get_flight_by_uuid(data['uuid'])
         if flight == None:
-            return [None, APP_INFO_BOX.build_message("Flight not found", 'error')]
+            return [None, APP_INFO_BOX.build_message("Vol non trouvé", 'error'), no_update]
         flight = flight.get_last_flight()
         print(flight)
+        if not DATA_MANAGER.is_dossier_exist(flight.get_dossier_id()):
+            return [None, APP_INFO_BOX.build_message("Le dossier attaché au survol n'existe pas", 'error'), no_update]
+
         flight_geojson = Flight.get_geojson(flight)
 
         similar_flights = self.data_manager.get_similar_flights(flight)

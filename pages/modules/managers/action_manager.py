@@ -79,9 +79,7 @@ class FeatureFetching(IAction, SQL_Fetcher):
         import json
         resp = self.fetch_sql(sql_file=self.sql_request_path)
         if resp is None:
-            self.is_error = True
-            self.result = 'SQL request failed'
-            return self
+            return self.trigger_error("No response from the database")
         self.result = json.loads(resp[0][0])
         return self
 
@@ -111,9 +109,7 @@ class GenerateSTToken(IPackedAction, SQL_Fetcher):
         resp = self.fetch_sql(sql_request="INSERT INTO survol.st_token (token, dossier_id) VALUES (%s, %s) RETURNING token; ", request_args=[st_token, dossier.get_id() ], commit=True)
     
         if self.is_sql_error(resp):
-            self.is_error = True
-            self.result = resp
-            return self
+            return self.trigger_error("Error while generating st_token")
         print("st_token generated : {}".format(st_token))
         self.passed_kwargs = {
             'st_token':st_token,
@@ -167,12 +163,12 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
                 markers.append(tmp.wkt)
             else:
                 lines.append(feature)
-            
-        if 'type' in lines[0]['properties'] and lines[0]['properties']['type'] == 'polyline':
-            lines = PolylineToMultistring(lines)
-        else:
-            lines = lines[0]
-        lines = shape(lines['geometry']).wkt
+        if len(lines) > 0:
+            if 'type' in lines[0]['properties'] and lines[0]['properties']['type'] == 'polyline':
+                lines = PolylineToMultistring(lines)
+            else:
+                lines = lines[0]
+            lines = shape(lines['geometry']).wkt
         return (markers, lines)
     
 
@@ -182,6 +178,9 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         dossier_id = f"'{dossier.get_id()}'" if dossier is not None else 'NULL'
         
         markers, lines = self.separate_features(self.geojson)
+
+        if(len(lines) == 0):
+            return self.trigger_error("Aucun tracé fourni")
  
         markers = list(map(lambda x: 'ST_SetSRID(ST_GeomFromText(\'{}\'),4326)'.format(x), markers))
         markers_array = 'ARRAY[' + ','.join(markers) + ']' if len(markers) > 0 else 'NULL'
@@ -191,8 +190,7 @@ class SaveFlight(IPackedAction, SQL_Fetcher):
         resp = self.fetch_sql(sql_request=sql_request, commit=True)
     
         if self.is_sql_error(resp):
-            self.trigger_error(resp['message'])
-            return self
+            return self.trigger_error(resp['message'])
         uuid = resp[0][0]
         self.result = {"message":"Flight saved", "type":"success", "uuid":uuid}
         self.passed_kwargs = {
@@ -261,10 +259,6 @@ class SetAnnotation(IPackedAction):
             self.trigger_error("Wrong annotation label")
             return False
         
-        if self.dossier.get_annotations()[self.annotation_label] != None and self.dossier.get_annotations()[self.annotation_label]['stringValue'] != "":
-            self.trigger_error("Annotation already set : "+self.dossier.get_annotations()[self.annotation_label]['stringValue'])
-            return False
-        
         return True
 
     def perform(self, **kwargs) -> any:
@@ -274,8 +268,8 @@ class SetAnnotation(IPackedAction):
         modifier = AnnotationModifier(self.data_manager.profile, self.dossier, instructeur_id=instructeur_id)
 
         if modifier.perform(annotation, self.value) != AnnotationModifier.SUCCESS:
-            self.trigger_error('Error during annotation modification')
-            return self
+            return self.trigger_error('Error during annotation modification')
+            
 
         self.result = {"message":"Annotation set", "type":"success"}
         self.passed_kwargs = kwargs
@@ -336,8 +330,7 @@ class ChangeDossierState(IPackedAction):
         instructeur_id = self.dossier.get_attached_instructeurs_info()[0]['id']
         modifier = StateModifier(self.data_manager.profile, self.dossier, instructeur_id=instructeur_id)
         if modifier.perform(self.new_state) != StateModifier.SUCCESS:
-            self.trigger_error('Error during state modification')
-            return self
+            return self.trigger_error('Error during state modification')
 
         return self.trigger_success("State changed", **kwargs)
 
@@ -567,8 +560,8 @@ class CreatePrefilledDossier(IPackedAction):
             return self.trigger_success("Dossier created", **self.passed_kwargs)
 
         except DemarchesSimpyException as e:
-            self.trigger_error(e.message)
-            return self
+            return self.trigger_error(e.message)
+            
 
 class UpdateFlightDossier(IPackedAction, SQL_Fetcher):
     def __init__(self, data_manager: DataManager) -> None:
@@ -586,16 +579,16 @@ class UpdateFlightDossier(IPackedAction, SQL_Fetcher):
         resp = self.fetch_sql(sql_request='INSERT INTO survol.dossier (dossier_id, dossier_number) VALUES (%s, %s) RETURNING dossier_id', request_args=[dossier_id, dossier_number], commit=True)
 
         if self.is_sql_error(resp):
-            self.trigger_error(resp['message'])
-            return self
+            return self.trigger_error(resp['message'])
+           
 
         dossier_id = resp[0][0]
 
         resp = self.fetch_sql(sql_request='UPDATE survol.flight_history SET dossier_id = %s WHERE uuid = %s RETURNING dossier_id', request_args=[dossier_id, uuid], commit=True)
         
         if self.is_sql_error(resp):
-            self.trigger_error(resp['message'])
-            return self
+            return self.trigger_error(resp['message'])
+           
 
         self.passed_kwargs = {
             "uuid":uuid,
