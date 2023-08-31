@@ -27,6 +27,8 @@ pip install -r requirements.txt
 ### Note 
 Cet outil dépends de deux packages qui ne sont pas disponibles sur PyPi, le fichier 'requirements.txt' contient l'url vers le dépôt. Normalement, pip devrait pouvoir les installer sans problème.
 
+#### Diagramme UX
+[Diagramme](https://github.com/PnMercantour/demarches/blob/main/assets/Diagramm%20Authorisation%20Survol%20Final.png)
 
 ## Configuration de l'application (obligatoire)
 
