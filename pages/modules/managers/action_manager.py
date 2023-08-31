@@ -477,11 +477,12 @@ class BuildPdf(IPackedAction, SQL_Fetcher):
             items.append(DisplayObj(field_label, GetAnnotationOrFieldValue(dossier, field_label), title_option))
 
 
+        raster_path = os.getenv('BASEMAP_PATH')
+        #Check if the file exists
+        path_exists = os.path.exists(raster_path)
 
 
-
-
-        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH'), dpi=200, base_map_params = {'alpha':0.75})
+        printer = CartoPrinter(geojsons, title, items,logo=Image.open("./assets/logo.png"), legends=legends, map=os.getenv('BASEMAP_PATH') if path_exists else None, dpi=200, base_map_params = {'alpha':0.75})
         printer.build_pdf(dist_dir="./tmp", output_name=f"flight_{dossier.get_id()}.pdf", output_dir="./pdf",schema=f'./pdf-templates/{CONFIG("pdf/pdf-template","vol_mercantour")}')
 
 
